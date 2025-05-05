@@ -34,6 +34,8 @@ public class export : MonoBehaviour
     public void ExportPlaneTexture()
     {
         RenderTexture rt = new RenderTexture(textureWidth, textureHeight, 24);
+        rt.hideFlags = HideFlags.DontSave;
+        DontDestroyOnLoad(rt);
         Graphics.Blit(null, rt, planeMaterial);
 
         if (hiddenRawImageForPlane != null)
