@@ -62,5 +62,12 @@ public class export : MonoBehaviour
         string path = Path.Combine(desktopPath, fileName);
         File.WriteAllBytes(path, bytes);
         Debug.Log("Saved to Desktop: " + path);
+        Application.ExternalEval(@"
+            var a = document.createElement('a');
+            a.href = '" + base64Image + @"';
+            a.download = 'my_marble.png';
+            a.click();
+        ");
+
     }
 }
