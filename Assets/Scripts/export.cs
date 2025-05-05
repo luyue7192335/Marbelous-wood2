@@ -33,21 +33,48 @@ public class export : MonoBehaviour
 
     public void ExportPlaneTexture()
     {
-        // 1. 新建 RT 并渲染 Plane 的材质
         RenderTexture rt = new RenderTexture(textureWidth, textureHeight, 24);
         Graphics.Blit(null, rt, planeMaterial);
 
-        // 2. 给隐藏的 RawImage 赋值（可选调试）
         if (hiddenRawImageForPlane != null)
         {
             hiddenRawImageForPlane.texture = rt;
         }
 
-        GL.Flush();
-
-        // 3. 导出
-        ExportRenderTexture(rt, "main_plane.png");
+        StartCoroutine(ExportNextFrame(rt, "main_plane.png"));
     }
+
+    IEnumerator ExportNextFrame(RenderTexture rt, string fileName)
+    {
+        yield return new WaitForEndOfFrame(); // ✅ 等待到下一帧
+
+        RenderTexture currentActiveRT = RenderTexture.active;
+        RenderTexture.active = rt;
+
+        Texture2D tex2D = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
+        tex2D.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+        tex2D.Apply();
+
+        RenderTexture.active = currentActiveRT;
+
+        byte[] bytes = tex2D.EncodeToPNG();
+
+    #if UNITY_WEBGL && !UNITY_EDITOR
+        string base64Image = Convert.ToBase64String(bytes);
+        Application.ExternalEval(@"
+            var a = document.createElement('a');
+            a.href = 'data:image/png;base64," + base64Image + @"';
+            a.download = '" + fileName + @"';
+            a.click();
+        ");
+    #else
+        string desktopPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop);
+        string path = Path.Combine(desktopPath, fileName);
+        File.WriteAllBytes(path, bytes);
+        Debug.Log("Saved to Desktop: " + path);
+    #endif
+    }
+
 
     private void ExportRenderTexture(RenderTexture rt, string fileName)
     {
