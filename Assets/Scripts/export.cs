@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using System.IO;
+using System;
 
 public class export : MonoBehaviour
 {
@@ -58,16 +59,23 @@ public class export : MonoBehaviour
         RenderTexture.active = currentActiveRT;
 
         byte[] bytes = tex2D.EncodeToPNG();
+
+    #if UNITY_WEBGL && !UNITY_EDITOR
+        // ✅ WebGL 版本：使用Base64 + 弹出下载
+        string base64Image = Convert.ToBase64String(bytes);
+        Application.ExternalEval(@"
+            var a = document.createElement('a');
+            a.href = 'data:image/png;base64," + base64Image + @"';
+            a.download = '" + fileName + @"';
+            a.click();
+        ");
+    #else
+        // ✅ 桌面版：直接保存到桌面
         string desktopPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop);
         string path = Path.Combine(desktopPath, fileName);
         File.WriteAllBytes(path, bytes);
         Debug.Log("Saved to Desktop: " + path);
-        Application.ExternalEval(@"
-            var a = document.createElement('a');
-            a.href = '" + base64Image + @"';
-            a.download = 'my_marble.png';
-            a.click();
-        ");
-
+    #endif
     }
+
 }
