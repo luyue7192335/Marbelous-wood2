@@ -43,6 +43,8 @@ public class export : MonoBehaviour
             hiddenRawImageForPlane.texture = rt;
         }
 
+        GL.Flush();
+
         // 3. 导出
         ExportRenderTexture(rt, "main_plane.png");
     }
