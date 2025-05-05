@@ -29,6 +29,6 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _LerpFactor: 0.9671748
+    - _LerpFactor: 1
     m_Colors: []
   m_BuildTextureStacks: []
