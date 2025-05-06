@@ -44,9 +44,14 @@ public class export : MonoBehaviour
         }
 
         
+        StartCoroutine(ExportAfterUIRender(rt, "main_plane.png"));
+    }
 
-        // 3. 导出
-        ExportRenderTexture(rt, "main_plane.png");
+    private IEnumerator ExportAfterUIRender(RenderTexture rt, string fileName)
+    {
+        yield return new WaitForEndOfFrame(); // ⭐ 等UI系统渲染完成
+
+        ExportRenderTexture(rt, fileName);
     }
 
     private void ExportRenderTexture(RenderTexture rt, string fileName)
@@ -62,8 +67,7 @@ public class export : MonoBehaviour
 
         byte[] bytes = tex2D.EncodeToPNG();
 
-    #if UNITY_WEBGL && !UNITY_EDITOR
-        // ✅ WebGL 版本：使用Base64 + 弹出下载
+        #if UNITY_WEBGL && !UNITY_EDITOR
         string base64Image = Convert.ToBase64String(bytes);
         Application.ExternalEval(@"
             var a = document.createElement('a');
@@ -72,7 +76,6 @@ public class export : MonoBehaviour
             a.click();
         ");
     #else
-        // ✅ 桌面版：直接保存到桌面
         string desktopPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop);
         string path = Path.Combine(desktopPath, fileName);
         File.WriteAllBytes(path, bytes);

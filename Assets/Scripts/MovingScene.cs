@@ -22,6 +22,15 @@ public class MovingScene : MonoBehaviour
     Material[] variationMats  = new Material[4];
     [SerializeField] private Button exitGenerateButton;
 
+    public PlaneZoomController zoomController; // 负责Plane缩放的脚本
+    private bool isLocked = false;
+    public static MovingScene Instance;
+
+        void Awake()
+        {
+            Instance = this;
+        }
+
     public class LiquidOperation
     {
         public enum OpType { Drop = 0, Drag = 1, Curl = 2 ,Comb=3}
@@ -94,12 +103,25 @@ public class MovingScene : MonoBehaviour
     [SerializeField] private TMP_Text sizeText;
     [SerializeField] private TMP_Text noiseText;
 
-    private bool isBasicDropActive = false;
-    private bool isDragActive = false;
-    private bool isCurlActive = false;
-    private bool isCombActive = false;
+    // private bool isBasicDropActive = false;
+    // private bool isDragActive = false;
+    // private bool isCurlActive = false;
+    // private bool isCombActive = false;
     private bool isDragging = false;  // **新增变量：用于判断是否处于拖拽状态**
     private Vector2 dragStartUV;  // **新增变量：存储拖拽起点**
+
+    public enum ToolMode
+    {
+        None,
+        Drop,
+        Drag,
+        Curl,
+        Comb,
+        ZoomIn
+    }
+
+    private ToolMode currentToolMode = ToolMode.None;
+
 
     private List<LiquidOperation> _operationQueue = new List<LiquidOperation>();
     void Start()
@@ -129,156 +151,252 @@ public class MovingScene : MonoBehaviour
 
     void Update()
     {
-        if (isBasicDropActive && Input.GetMouseButtonDown(0))
+        // if (PlaneZoomController.Instance != null && PlaneZoomController.Instance.IsZoomMode()){
+        //    Debug.Log($" lock the click");
+        //     return;
+        // }
+        
+
+        if (Input.GetMouseButtonDown(0))
         {
-            HandleDrop();
-        }
-        else if (isDragActive)
-        {
-            HandleDrag();
-        }
-        else if (isCurlActive)
-        {
-            HandleCurl();
-        }
-        else if (isCombActive)
-        {
-            HandleComb();
+            
+
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
+
+            if (Physics.Raycast(ray, out hit))
+            {
+                Vector2 pixelUV = hit.textureCoord;
+                if (!IsValidUV(pixelUV)) return;
+
+                if (PlaneZoomController.Instance != null && PlaneZoomController.Instance.TryZoomIn(pixelUV))
+                {
+                    Debug.Log($"Zoom handled this click.");
+                    return; // ✅ 吃掉了点击，不再继续
+                }
+                if (PlaneZoomController.Instance != null )
+                {
+                    Debug.Log($"PlaneZoomController.Instance != null.");
+                    
+                }
+                if ( PlaneZoomController.Instance.TryZoomIn(pixelUV))
+                {
+                    Debug.Log($"Instance.TryZoomIn(pixelUV).");
+                   
+                }
+
+                switch (currentToolMode)
+                {
+                    case ToolMode.Drop:
+                        _operationQueue.Add(new LiquidOperation(pixelUV, dropRadius, selectedColor, noiseStrength));
+                        Debug.Log($" Drop Added at {pixelUV}");
+                        break;
+
+                    case ToolMode.Drag:
+                        dragStartUV = pixelUV;
+                        isDragging = true;
+                        Debug.Log($" Drag Start at {pixelUV}");
+                        break;
+
+                    case ToolMode.Curl:
+                        dragStartUV = pixelUV;
+                        isDragging = true;
+                        Debug.Log($" Curl Start at {pixelUV}");
+                        break;
+
+                    case ToolMode.Comb:
+                        dragStartUV = pixelUV;
+                        isDragging = true;
+                        Debug.Log($" Comb Start at {pixelUV}");
+                        break;
+
+                    case ToolMode.ZoomIn:
+                        if (PlaneZoomController.Instance != null)
+                        {
+                            PlaneZoomController.Instance.ZoomInAt(pixelUV);
+                            currentToolMode = ToolMode.None; // 放大后退出Zoom
+                            Debug.Log($" Zoom In at {pixelUV}");
+                        }
+                        else
+                        {
+                            Debug.LogWarning("Zoom Controller not found.");
+                        }
+                        break;
+                }
+            }
         }
 
+        // 拖拽型操作（Drag / Curl / Comb）
+        if (Input.GetMouseButtonUp(0) && isDragging)
+        {
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
+
+            if (Physics.Raycast(ray, out hit))
+            {
+                Vector2 dragEndUV = hit.textureCoord;
+                if (!IsValidUV(dragEndUV))
+                {
+                    isDragging = false;
+                    return;
+                }
+
+                switch (currentToolMode)
+                {
+                    case ToolMode.Drag:
+                        _operationQueue.Add(new LiquidOperation(dragStartUV, dragEndUV, dropRadius));
+                        Debug.Log($" Drag Completed from {dragStartUV} to {dragEndUV}");
+                        break;
+
+                    case ToolMode.Curl:
+                        _operationQueue.Add(new LiquidOperation(dragStartUV, dropRadius, dragEndUV));
+                        Debug.Log($" Curl Completed from {dragStartUV} to {dragEndUV}");
+                        break;
+
+                    case ToolMode.Comb:
+                        _operationQueue.Add(new LiquidOperation(dragStartUV, dropRadius, dragEndUV, true));
+                        Debug.Log($" Comb Completed from {dragStartUV} to {dragEndUV}");
+                        break;
+                }
+            }
+
+            isDragging = false;
+        }
+
+        // 排队执行操作
         if (_operationQueue.Count > 0 && _activeTransition == null)
         {
-            var oldestOp = _operationQueue[0]; // 获取最早操作
-            _operationQueue.RemoveAt(0);       // 移除队列头部
+            var oldestOp = _operationQueue[0];
+            _operationQueue.RemoveAt(0);
             AddNewOperation(oldestOp);
             Debug.Log($"从队列取出操作：{oldestOp}");
         }
-
     }
 
-    void HandleDrop()
-    {
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        RaycastHit hit;
 
-        if (Physics.Raycast(ray, out hit))
-        {
-            MeshCollider meshCollider = hit.collider.GetComponent<MeshCollider>();
-            if (meshCollider == null) return;
+    // void HandleDrop()
+    // {
+    //     Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+    //     RaycastHit hit;
 
-            Vector2 pixelUV = hit.textureCoord;
-            if (!IsValidUV(pixelUV)) return;
+    //     if (Physics.Raycast(ray, out hit))
+    //     {
+    //         MeshCollider meshCollider = hit.collider.GetComponent<MeshCollider>();
+    //         if (meshCollider == null) return;
 
-            //AddNewOperation(new LiquidOperation(pixelUV, dropRadius, selectedColor));
-            _operationQueue.Add(new LiquidOperation(pixelUV, dropRadius, selectedColor, noiseStrength));
-            Debug.Log($" Drop Added at {pixelUV}");
-        }
-    }
+    //         Vector2 pixelUV = hit.textureCoord;
+    //         if (!IsValidUV(pixelUV)) return;
 
-    void HandleDrag()
-    {
-        if (Input.GetMouseButtonDown(0))
-        {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-            if (Physics.Raycast(ray, out hit))
-            {
-                dragStartUV = hit.textureCoord;
-                isDragging = true;
-                Debug.Log($"🔹 Drag Start: {dragStartUV}");
-            }
-        }
+    //         //AddNewOperation(new LiquidOperation(pixelUV, dropRadius, selectedColor));
+    //         _operationQueue.Add(new LiquidOperation(pixelUV, dropRadius, selectedColor, noiseStrength));
+    //         Debug.Log($" Drop Added at {pixelUV}");
+    //     }
+    // }
+
+    // void HandleDrag()
+    // {
+    //     if (Input.GetMouseButtonDown(0))
+    //     {
+    //         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+    //         RaycastHit hit;
+    //         if (Physics.Raycast(ray, out hit))
+    //         {
+    //             dragStartUV = hit.textureCoord;
+    //             isDragging = true;
+    //             Debug.Log($"🔹 Drag Start: {dragStartUV}");
+    //         }
+    //     }
         
-        if (Input.GetMouseButtonUp(0) && isDragging)
-        {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-            if (Physics.Raycast(ray, out hit))
-            {
-                Vector2 dragEndUV = hit.textureCoord;
-                if (!IsValidUV(dragEndUV)) return;
+    //     if (Input.GetMouseButtonUp(0) && isDragging)
+    //     {
+    //         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+    //         RaycastHit hit;
+    //         if (Physics.Raycast(ray, out hit))
+    //         {
+    //             Vector2 dragEndUV = hit.textureCoord;
+    //             if (!IsValidUV(dragEndUV)) return;
 
-                if (Vector2.Distance(dragStartUV, dragEndUV) > 0.01f)
-                {
-                    //AddNewOperation(new LiquidOperation(dragStartUV, dragEndUV, dropRadius));
-                     _operationQueue.Add(new LiquidOperation(dragStartUV, dragEndUV, dropRadius));
+    //             if (Vector2.Distance(dragStartUV, dragEndUV) > 0.01f)
+    //             {
+    //                 //AddNewOperation(new LiquidOperation(dragStartUV, dragEndUV, dropRadius));
+    //                  _operationQueue.Add(new LiquidOperation(dragStartUV, dragEndUV, dropRadius));
           
-                    Debug.Log($" Drag Completed from {dragStartUV} to {dragEndUV}");
-                }
-            }
-            isDragging = false;
-        }
-    }
+    //                 Debug.Log($" Drag Completed from {dragStartUV} to {dragEndUV}");
+    //             }
+    //         }
+    //         isDragging = false;
+    //     }
+    // }
 
-    void HandleComb()
-    {
-        if (Input.GetMouseButtonDown(0))
-        {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-            if (Physics.Raycast(ray, out hit))
-            {
-                dragStartUV = hit.textureCoord;
-                isDragging = true;
-                Debug.Log($"🔹 comb Start");
-            }
-        }
+    // void HandleComb()
+    // {
+    //     if (Input.GetMouseButtonDown(0))
+    //     {
+    //         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+    //         RaycastHit hit;
+    //         if (Physics.Raycast(ray, out hit))
+    //         {
+    //             dragStartUV = hit.textureCoord;
+    //             isDragging = true;
+    //             Debug.Log($"🔹 comb Start");
+    //         }
+    //     }
         
-        if (Input.GetMouseButtonUp(0) && isDragging)
-        {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-            if (Physics.Raycast(ray, out hit))
-            {
-                Vector2 dragEndUV = hit.textureCoord;
-                if (!IsValidUV(dragEndUV)) return;
+    //     if (Input.GetMouseButtonUp(0) && isDragging)
+    //     {
+    //         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+    //         RaycastHit hit;
+    //         if (Physics.Raycast(ray, out hit))
+    //         {
+    //             Vector2 dragEndUV = hit.textureCoord;
+    //             if (!IsValidUV(dragEndUV)) return;
 
-                if (Vector2.Distance(dragStartUV, dragEndUV) > 0.01f)
-                {
-                    //AddNewOperation(new LiquidOperation(dragStartUV, dragEndUV, dropRadius));
-                     _operationQueue.Add(new LiquidOperation(dragStartUV, dropRadius,dragEndUV,true));
+    //             if (Vector2.Distance(dragStartUV, dragEndUV) > 0.01f)
+    //             {
+    //                 //AddNewOperation(new LiquidOperation(dragStartUV, dragEndUV, dropRadius));
+    //                  _operationQueue.Add(new LiquidOperation(dragStartUV, dropRadius,dragEndUV,true));
           
-                    Debug.Log($" comb Completed from {dragStartUV} to {dragEndUV}");
-                }
-            }
-            isDragging = false;
-        }
-    }
+    //                 Debug.Log($" comb Completed from {dragStartUV} to {dragEndUV}");
+    //             }
+    //         }
+    //         isDragging = false;
+    //     }
+    // }
 
-    void HandleCurl()
-    {
-        if (Input.GetMouseButtonDown(0))
-        {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-            if (Physics.Raycast(ray, out hit))
-            {
-                dragStartUV = hit.textureCoord;
-                isDragging = true;
-                Debug.Log($"🔹 curl Start: {dragStartUV}");
-            }
-        }
+    // void HandleCurl()
+    // {
+    //     if (Input.GetMouseButtonDown(0))
+    //     {
+    //         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+    //         RaycastHit hit;
+    //         if (Physics.Raycast(ray, out hit))
+    //         {
+    //             dragStartUV = hit.textureCoord;
+    //             isDragging = true;
+    //             Debug.Log($"🔹 curl Start: {dragStartUV}");
+    //         }
+    //     }
         
-        if (Input.GetMouseButtonUp(0) && isDragging)
-        {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-            if (Physics.Raycast(ray, out hit))
-            {
-                Vector2 dragEndUV = hit.textureCoord;
-                if (!IsValidUV(dragEndUV)) return;
+    //     if (Input.GetMouseButtonUp(0) && isDragging)
+    //     {
+    //         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+    //         RaycastHit hit;
+    //         if (Physics.Raycast(ray, out hit))
+    //         {
+    //             Vector2 dragEndUV = hit.textureCoord;
+    //             if (!IsValidUV(dragEndUV)) return;
 
-                if (Vector2.Distance(dragStartUV, dragEndUV) > 0.01f)
-                {
-                    //AddNewOperation(new LiquidOperation(dragStartUV, dragEndUV, dropRadius));
-                     _operationQueue.Add(new LiquidOperation(dragStartUV,  dropRadius, dragEndUV));
+    //             if (Vector2.Distance(dragStartUV, dragEndUV) > 0.01f)
+    //             {
+    //                 //AddNewOperation(new LiquidOperation(dragStartUV, dragEndUV, dropRadius));
+    //                  _operationQueue.Add(new LiquidOperation(dragStartUV,  dropRadius, dragEndUV));
           
-                    Debug.Log($" curl Completed from {dragStartUV} to {dragEndUV}");
-                }
-            }
-            isDragging = false;
-        }
-    }
+    //                 Debug.Log($" curl Completed from {dragStartUV} to {dragEndUV}");
+    //             }
+    //         }
+    //         isDragging = false;
+    //     }
+    // }
 
     void GenerateVariations() {
         
@@ -398,39 +516,77 @@ public class MovingScene : MonoBehaviour
         
     }
 
-    private void ActivateBasicDropTool()
+    // private void ActivateBasicDropTool()
+    // {
+    //     isBasicDropActive = true;
+    //     isCurlActive = false;
+    //     isDragActive = false; // **确保只激活一个工具**
+    //     isCombActive = false;
+    // }
+
+    // public void ActivateDragTool()
+    // {
+    //     isBasicDropActive = false;
+    //     isDragActive = true;
+    //     isCurlActive = false;
+    //     isCombActive = false;
+    //     Debug.Log(" Drag Tool Activated");
+    // }
+
+    // public void ActivateCurlTool()
+    // {
+    //     isBasicDropActive = false;
+    //     isDragActive = false;
+    //     isCurlActive = true;
+    //     isCombActive = false;
+    //     Debug.Log(" Curl Tool Activated");
+    // }
+    // public void ActivateCombTool()
+    // {
+    //     isBasicDropActive = false;
+    //     isDragActive = false;
+    //     isCurlActive = false;
+    //     isCombActive = true;
+    //     Debug.Log(" Comb Tool Activated");
+    // }
+
+    public void ActivateBasicDropTool()
     {
-        isBasicDropActive = true;
-        isCurlActive = false;
-        isDragActive = false; // **确保只激活一个工具**
-        isCombActive = false;
+        currentToolMode = ToolMode.Drop;
     }
 
     public void ActivateDragTool()
     {
-        isBasicDropActive = false;
-        isDragActive = true;
-        isCurlActive = false;
-        isCombActive = false;
-        Debug.Log(" Drag Tool Activated");
+        currentToolMode = ToolMode.Drag;
     }
 
     public void ActivateCurlTool()
     {
-        isBasicDropActive = false;
-        isDragActive = false;
-        isCurlActive = true;
-        isCombActive = false;
-        Debug.Log(" Curl Tool Activated");
+        currentToolMode = ToolMode.Curl;
     }
+
     public void ActivateCombTool()
     {
-        isBasicDropActive = false;
-        isDragActive = false;
-        isCurlActive = false;
-        isCombActive = true;
-        Debug.Log(" Comb Tool Activated");
+        currentToolMode = ToolMode.Comb;
     }
+
+    public void ActivateZoomTool()
+    {
+        if (isLocked) return;  // 如果正在Zoom中，不能再次进入
+        currentToolMode = ToolMode.ZoomIn;
+        isLocked = true;
+        Debug.Log($" is locked");
+        PlaneZoomController.Instance.EnterZoomInMode();
+
+    }
+
+    public void OnZoomInCompleted()
+    {
+        isLocked = false;
+        Debug.Log($" is not locked");
+        currentToolMode = ToolMode.None;
+    }
+
 
     private void OnSizeSliderChanged(float value)
     {
