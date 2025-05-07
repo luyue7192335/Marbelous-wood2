@@ -77,6 +77,10 @@ public class Preset : MonoBehaviour
         }
 
         presetDropdown.AddOptions(options);
+
+        // ✅ ✅ ✅ 加在这里（防止自动选择第一个并且让UI强制刷新）
+        presetDropdown.value = -1;  // 取消当前选择，避免触发选择事件
+        presetDropdown.RefreshShownValue();  // 强制UI刷新，防止旧数据残留
     }
 
     public void SaveCurrentAsPreset()
