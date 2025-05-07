@@ -735,6 +735,48 @@ public class MovingScene : MonoBehaviour
         mat.SetFloat(      "_LerpFactor",      1f);
     }
 
+    // 获取当前模式
+    public ToolMode CurrentToolMode()
+    {
+        return currentToolMode;
+    }
+
+    public Color GetSelectedColor1()
+    {
+        return selectedColor;
+    }
+
+    public float GetDropRadius()
+    {
+        return dropRadius;
+    }
+
+    public float GetNoiseStrength()
+    {
+        return noiseStrength;
+    }
+
+    public void SetToolMode(ToolMode mode)
+    {
+        currentToolMode = mode;
+    }
+
+    public void SetSelectedColor1(Color color)
+    {
+        selectedColor = color;
+    }
+
+    public void SetDropRadius(float radius)
+    {
+        dropRadius = radius;
+    }
+
+    public void SetNoiseStrength(float strength)
+    {
+        noiseStrength = strength;
+    }
+
+
 
 
 }
