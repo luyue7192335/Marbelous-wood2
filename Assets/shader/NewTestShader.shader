@@ -141,51 +141,57 @@ Shader "Unlit/NewTestShader"
                     }
                     else if(_OpTypes[lastOpIndex] == 1) // DRAG操作
                     {
-                        #define LAMBDA 0.02
-                        #define FALLOFF 1.0
-                        float _DragIntensity = 0.7;
-                        #define EDGE_SMOOTHNESS 0.3 // [0.1-0.5] 边缘柔化系数
+                        // #define LAMBDA 0.02
+                        // #define FALLOFF 1.0
+                        // float _DragIntensity = 0.7;
+                        // #define EDGE_SMOOTHNESS 0.3 // [0.1-0.5] 边缘柔化系数
 
                         
                         float2 start = _AllOpData[lastOpIndex].xy;
                         float2 end = _AllOpData[lastOpIndex].zw;
                         float baseScale = _AllScales[lastOpIndex];
+                        float noiseStrength = 4*_AllNoiseStrength[lastOpIndex];
                         
                         // 动态缩放系数
                         float dynamicScale = lerp(0.0, baseScale, _LerpFactor);
                         
                         // 基于动态缩放重新计算位移
-                        float2 dragVec = end - start;
-                        float alpha = length(dragVec);
-                        if(alpha < 0.01) return tex2D(_MainTex, displacedUV);
+                        float2 dragVec = start-end ;
+                        //x(-1)
+                        float dragLength = length(dragVec);
+                        if(dragLength < 0.01) return tex2D(_MainTex, displacedUV);
                         
-                        float beta = dynamicScale * 0.5;
-                        float2 m = dragVec / alpha;
-                        float2 n = float2(-m.y, m.x);
-                        
-                        float2 toStart = displacedUV - start;
-                        float l1 = dot(toStart, n);
-                         float l2_raw = 1.0 - smoothstep(0.0, beta, abs(l1));
+                       float2 dir = dragVec / dragLength;  // 方向
+                            float2 offset = displacedUV - start;
 
-                        // 纺锤形改造 ▼
-                        float t = dot(toStart, m) / alpha; // 新增轴向位置参数
-                        float radial_atten = exp(-4.0 * t * t); // 新增径向衰减
-                        //float radial_atten = (t < 0.0) ? -exp(-4.0 * t * t) : exp(-4.0 * t * t);
-                        
-                     
-                        // float l2 = saturate(l2_raw);
-                         float l2 = saturate(l2_raw * radial_atten);
-                         float denominator = max(beta * 0.5 + 0.02, 0.01);
-                        // float l3 = (alpha * 0.02) / denominator;
-                        float l3 = (alpha * 0.02 * (1.0 + 2.0 * radial_atten)) / denominator; // 动态调节长度系数
-                        
-                        float attenuation = pow(l2, 1.0);
+                            float along = dot(offset, dir);                  // 轴向位置
+                            float2 closest = start + dir * along;
+                            float distToLine = length(displacedUV - closest); // 法向距离
 
-                        
-                         
-                        // 动态位移强度
-                        float dynamicIntensity = lerp(0.0, 0.7, _LerpFactor);
-                        displacedUV -= m * l3 * attenuation * dynamicIntensity;
+                            float radius = dynamicScale;  // 影响范围
+                            float fade = smoothstep(radius, 0.0, distToLine); // 近=1 远=0
+
+                            //float pushStrength = 0.2;  
+                            float pushStrength = dragLength * 0.4;
+
+                            displacedUV += dir * pushStrength * fade;
+
+                            // -------- 涟漪（沿法线方向的波动）---------
+                            // float rippleFrequency = 20.0;
+                            // float rippleAmplitude = 0.07;
+                            float rippleFrequency = lerp(30.0, 600.0, noiseStrength);
+                            float rippleAmplitude = lerp(0.1, 2.0, noiseStrength);
+
+                            float alongT = along / dragLength;
+
+                            float ripple = sin(alongT * rippleFrequency) * rippleAmplitude * fade;
+                            // float turbulence = sin(alongT * rippleFrequency * 3.0 + displacedUV.x * 100.0 + displacedUV.y * 100.0) * lerp(0.0, 0.05, noiseStrength);
+
+                            // ripple += turbulence;
+
+                            float2 normal = normalize(displacedUV - closest + 0.0001);
+                            displacedUV += normal * ripple;
+
                     }
                     else if(_OpTypes[lastOpIndex] == 3) // comb操作
                     {
@@ -307,53 +313,49 @@ Shader "Unlit/NewTestShader"
                     }
                     else if(_OpTypes[j] == 1) // DRAG 操作
                     {
-                        #define LAMBDA 0.02  
-                        #define FALLOFF 1.0   
-                        float ALPHA = 0.4;
-                        float _DragIntensity = 0.7;
-                        #define EDGE_SMOOTHNESS 0.3 // [0.1-0.5] 边缘柔化系数
+                            float2 start = _AllOpData[j].xy;
+                            float2 end   = _AllOpData[j].zw;
+                            float scale  = _AllScales[j];
+                            float noiseStrength =4*_AllNoiseStrength[j];
 
-                        float2 start = _AllOpData[j].xy;
-                        float2 end = _AllOpData[j].zw;
-                        float scale = _AllScales[j];
+                            float2 dragVec = start-end ;
+                            float dragLength = length(dragVec);
+                            if(dragLength < 0.01) continue;
 
-                        float2 dragVec = end - start;
-                        float alpha = length(dragVec);
-                        if(alpha < 0.01) continue;
-                        float beta = scale * 0.5;
-                        if(scale < 0.01) continue;
+                            float2 dir = dragVec / dragLength;  // 方向
+                            float2 offset = displacedUV - start;
 
-                        float2 m = dragVec / alpha;
-                        float2 n = float2(-m.y, m.x);
+                            float along = dot(offset, dir);                  // 轴向位置
+                            float2 closest = start + dir * along;
+                            float distToLine = length(displacedUV - closest); // 法向距离
 
-                        float2 toStart = displacedUV - start;
-                        float l1 = dot(toStart, n);
+                            float radius = scale;  // 影响范围
+                            float fade = smoothstep(radius, 0.0, distToLine); // 近=1 远=0
 
-                        // float l2_raw = 1.0 - smoothstep(0.0, beta, abs(l1));
-                        // float l2 = saturate(l2_raw);
-                        // float denominator = max(beta * 0.5 + 0.02, 0.01);
-                        // float l3 = (alpha * LAMBDA) / denominator;
-                        // float attenuation = pow(l2, FALLOFF);
+                            // -------- 推动（沿拖拽方向）---------
+                            //float pushStrength = 0.2; 
+                            float pushStrength = dragLength * 0.4;
+ 
+                            displacedUV += dir * pushStrength * fade;
 
-                       float l2_raw = 1.0 - smoothstep(0.0, beta, abs(l1));
-    
-                        // 纺锤形改造 ▼
-                        float t = dot(toStart, m) / alpha; // 新增轴向位置参数
-                        float radial_atten = exp(-4.0 * t * t); // 新增径向衰减
-                        //float radial_atten = (t < 0.0) ? -exp(-4.0 * t * t) : exp(-4.0 * t * t);
-         
+                            // -------- 涟漪（沿法线方向的波动）---------
+                            // float rippleFrequency = 20.0;
+                            // float rippleAmplitude = 0.07;
+                            float rippleFrequency = lerp(30.0, 600.0, noiseStrength);
+                            float rippleAmplitude = lerp(0.1, 2.0, noiseStrength);
+
+                            float alongT = along / dragLength;
+
+                            float ripple = sin(alongT * rippleFrequency) * rippleAmplitude * fade;
+
+                            //float ripple = sin(alongT * rippleFrequency) * rippleAmplitude * fade;
+                            // float turbulence = sin(alongT * rippleFrequency * 3.0 + displacedUV.x * 100.0 + displacedUV.y * 100.0) * lerp(0.0, 0.05, noiseStrength);
+
+                            // ripple += turbulence;
 
 
-                        // 合成衰减场
-                        float l2 = saturate(l2_raw * radial_atten);
-                        float denominator = max(beta * 0.5 + LAMBDA, 0.01);
-                        float l3 = (alpha * LAMBDA * (1.0 + 2.0 * radial_atten)) / denominator;
-                        float attenuation = pow(l2, FALLOFF);
-
-                        
-
-                        float2 displacement = m * l3 * attenuation * _DragIntensity;
-                        displacedUV -= displacement;
+                            float2 normal = normalize(displacedUV - closest + 0.0001);
+                            displacedUV += normal * ripple;
                     }
                     else if(_OpTypes[j] == 3) // comb 操作
                     {
