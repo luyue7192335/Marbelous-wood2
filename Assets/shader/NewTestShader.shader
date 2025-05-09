@@ -141,35 +141,42 @@ Shader "Unlit/NewTestShader"
                     }
                     else if (_OpTypes[lastOpIndex] == 1) // DRAG 操作（推前补后 + 噪声扰动）
                     {
-                            float2 start = _AllOpData[lastOpIndex].xy;
-                            float2 end   = _AllOpData[lastOpIndex].zw;
-                            float scale  = _AllScales[lastOpIndex];
-                            float noiseStrength = _AllNoiseStrength[lastOpIndex];
+                        float2 start = _AllOpData[lastOpIndex].xy;
+                        float2 end   = _AllOpData[lastOpIndex].zw;
+                        float scale  = _AllScales[lastOpIndex];
+                        float noiseStrength = _AllNoiseStrength[lastOpIndex];
+                        float dynamicScale = lerp(0.0, scale, _LerpFactor);
 
-                            float dynamicRadius = lerp(0.0, scale, _LerpFactor);
-                            float2 dragVec = -end + start;
-                            float dragLength = length(dragVec);
-                            if (dragLength < 0.01) return tex2D(_MainTex, displacedUV);
+                        float2 dragVec = start - end;  // 拖拽方向，start → end
+                        float dragLength = length(dragVec);
+                        if (dragLength < 0.01) return tex2D(_MainTex, displacedUV);
 
-                            float2 dir = dragVec / dragLength;
-                            float2 offset = displacedUV - start;
-                            float along = dot(offset, dir);
-                            float2 closest = start + dir * along;
-                            float distToLine = length(displacedUV - closest);
+                        float2 dir = normalize(dragVec);
+                        float2 offset = displacedUV - start;
 
-                            // 沿拖拽线段范围衰减
-                            float fadeAlong = smoothstep(0.0, 0.1 * dragLength, along) * (1.0 - smoothstep(0.9 * dragLength, dragLength, along));
-                            float fadeAcross = smoothstep(dynamicRadius, 0.0, distToLine);
-                            float influence = fadeAlong * fadeAcross;
+                        float along = dot(offset, dir);
+                        float2 closest = start + dir * along;
+                        float distToLine = length(displacedUV - closest);
 
-                            float pushStrength = 0.4 * dragLength * _LerpFactor;
+                        float radius = dynamicScale;
+                        float fade = smoothstep(radius, 0.0, distToLine);  // 法向影响
 
-                            // 噪声扰动增强边缘变化感
-                            float2 noiseCoord = displacedUV * (50.0 + 80.0 * noiseStrength);
-                            float noise = sin(dot(noiseCoord, float2(12.9898, 78.233))) * 0.5 + 0.5;
-                            float noisePower = lerp(0.8, 1.2, noiseStrength * noise);
+                        // ------- Perlin噪声扰动（模拟自然破碎边缘）-------
+                        float2 noiseCoord = displacedUV * (150.0 + noiseStrength * 800.0);
+                        float rawPerlin = perlin_noise(noiseCoord);
+                        float perlin = pow(abs(rawPerlin * 2.0 - 1.0), 3.0); // 转成 [-1,1] → [0,1] → 加强极值
 
-                            displacedUV += dir * pushStrength * influence * noisePower;
+                        // 放大扰动
+                        float noisePower = lerp(0.5, 6.0, perlin * noiseStrength);  // 更自然地调制边缘强度
+
+                        // ------- 推前补后（方向一致，幅度对称）-------
+                        float pushStrength = dragLength * 0.3;
+
+                        float2 displace = dir * pushStrength * fade * noisePower;
+
+
+                            displacedUV += displace;   // 前推
+
                     }
 
                     
@@ -352,27 +359,32 @@ Shader "Unlit/NewTestShader"
                         float scale  = _AllScales[j];
                         float noiseStrength = _AllNoiseStrength[j];
 
-                        float2 dragVec = -end + start;
+                        float2 dragVec = start - end;
                         float dragLength = length(dragVec);
                         if (dragLength < 0.01) continue;
 
-                        float2 dir = dragVec / dragLength;
+                        float2 dir = normalize(dragVec);
                         float2 offset = displacedUV - start;
+
                         float along = dot(offset, dir);
                         float2 closest = start + dir * along;
                         float distToLine = length(displacedUV - closest);
 
-                        float fadeAlong = smoothstep(0.0, 0.1 * dragLength, along) * (1.0 - smoothstep(0.9 * dragLength, dragLength, along));
-                        float fadeAcross = smoothstep(scale, 0.0, distToLine);
-                        float influence = fadeAlong * fadeAcross;
+                        float radius = scale;
+                        float fade = smoothstep(radius, 0.0, distToLine);
 
-                        float pushStrength = 0.4 * dragLength;
+                        float2 noiseCoord = displacedUV * (150.0 + noiseStrength * 800.0);
+                        float rawPerlin = perlin_noise(noiseCoord);
+                        float perlin = pow(abs(rawPerlin * 2.0 - 1.0), 3.0); // 转成 [-1,1] → [0,1] → 加强极值
 
-                        float2 noiseCoord = displacedUV * (50.0 + 80.0 * noiseStrength);
-                        float noise = sin(dot(noiseCoord, float2(12.9898, 78.233))) * 0.5 + 0.5;
-                        float noisePower = lerp(0.8, 1.2, noiseStrength * noise);
+                        // 放大扰动
+                        float noisePower = lerp(0.5, 6.0, perlin * noiseStrength); 
+                        float pushStrength = dragLength * 0.3;
+                        float2 displace = dir * pushStrength * fade * noisePower;
 
-                        displacedUV += dir * pushStrength * influence * noisePower;
+                        
+                        displacedUV += displace;
+    
                     }
 
                     else if(_OpTypes[j] == 4) // DRAG 操作
