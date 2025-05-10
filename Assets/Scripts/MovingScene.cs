@@ -33,7 +33,7 @@ public class MovingScene : MonoBehaviour
 
     public class LiquidOperation
     {
-        public enum OpType { Drop = 0, Drag = 1, Curl = 2 ,Comb=3}
+        public enum OpType { Drop = 0, Drag = 1, Curl = 2 ,Comb=3,Wave=4}
         
         public OpType operationType;
         public Vector4 data; // x,y,z,w根据类型复用
@@ -52,11 +52,12 @@ public class MovingScene : MonoBehaviour
         }
 
         // Drag构造器
-        public LiquidOperation(Vector2 startPos, Vector2 endPos, float scale)
+        public LiquidOperation(Vector2 startPos, Vector2 endPos, float scale,float noiseStrength)
         {
             operationType = OpType.Drag;
             data = new Vector4(startPos.x, startPos.y, endPos.x, endPos.y);
             this.scale = scale; 
+            this.noiseStrength = noiseStrength;
         }
 
          public LiquidOperation(Vector2 startPos, float scale, Vector2 endPos)
@@ -66,10 +67,17 @@ public class MovingScene : MonoBehaviour
             this.scale = scale; 
         }
 
-                // .Comb构造器
+        // .Comb构造器
         public LiquidOperation(Vector2 startPos,  float scale, Vector2 endPos, bool isCurl)
         {
             operationType = OpType.Comb;
+            data = new Vector4(startPos.x, startPos.y, endPos.x, endPos.y);
+            this.scale = scale; 
+        }
+        // .wave构造器
+        public LiquidOperation(Vector2 startPos, float scale, Vector2 endPos, float isWave)
+        {
+            operationType = OpType.Wave;
             data = new Vector4(startPos.x, startPos.y, endPos.x, endPos.y);
             this.scale = scale; 
         }
@@ -98,6 +106,7 @@ public class MovingScene : MonoBehaviour
     [SerializeField] private Button dragButton;
     [SerializeField] private Button curlButton;
     [SerializeField] private Button combButton;
+    [SerializeField] private Button waveButton;
     [SerializeField] private Slider sizeSlider;
     [SerializeField] private Slider noiseSlider;
     [SerializeField] private TMP_Text sizeText;
@@ -117,6 +126,7 @@ public class MovingScene : MonoBehaviour
         Drag,
         Curl,
         Comb,
+        Wave,
         ZoomIn
     }
 
@@ -136,6 +146,7 @@ public class MovingScene : MonoBehaviour
         dragButton.onClick.AddListener(ActivateDragTool);
         curlButton.onClick.AddListener(ActivateCurlTool);
         combButton.onClick.AddListener(ActivateCombTool);
+        waveButton.onClick.AddListener(ActivateWaveTool);
         sizeSlider.onValueChanged.AddListener(OnSizeSliderChanged);
         noiseSlider.onValueChanged.AddListener(OnNoiseSliderChanged);
         generateButton.onClick.AddListener(GenerateVariations);
@@ -210,6 +221,12 @@ public class MovingScene : MonoBehaviour
                         Debug.Log($" Comb Start at {pixelUV}");
                         break;
 
+                    case ToolMode.Wave:
+                        dragStartUV = pixelUV;
+                        isDragging = true;
+                        Debug.Log($" wave Start at {pixelUV}");
+                        break;
+
                     case ToolMode.ZoomIn:
                         if (PlaneZoomController.Instance != null)
                         {
@@ -244,7 +261,7 @@ public class MovingScene : MonoBehaviour
                 switch (currentToolMode)
                 {
                     case ToolMode.Drag:
-                        _operationQueue.Add(new LiquidOperation(dragStartUV, dragEndUV, dropRadius));
+                        _operationQueue.Add(new LiquidOperation(dragStartUV, dragEndUV, dropRadius,noiseStrength));
                         Debug.Log($" Drag Completed from {dragStartUV} to {dragEndUV}");
                         break;
 
@@ -256,6 +273,11 @@ public class MovingScene : MonoBehaviour
                     case ToolMode.Comb:
                         _operationQueue.Add(new LiquidOperation(dragStartUV, dropRadius, dragEndUV, true));
                         Debug.Log($" Comb Completed from {dragStartUV} to {dragEndUV}");
+                        break;
+                    
+                    case ToolMode.Wave:
+                        _operationQueue.Add(new LiquidOperation(dragStartUV, dropRadius, dragEndUV, 1f));
+                        Debug.Log($" wave Completed from {dragStartUV} to {dragEndUV}");
                         break;
                 }
             }
@@ -570,6 +592,11 @@ public class MovingScene : MonoBehaviour
         currentToolMode = ToolMode.Comb;
     }
 
+    public void ActivateWaveTool()
+    {
+        currentToolMode = ToolMode.Wave;
+    }
+
     public void ActivateZoomTool()
     {
         if (isLocked) return;  // 如果正在Zoom中，不能再次进入
@@ -665,6 +692,7 @@ public class MovingScene : MonoBehaviour
                     positions[i] = new Vector4(op.data.x, op.data.y, op.data.z, op.data.w);
                     scales[i] = op.scale;   // **Drag 没有半径**
                     opTypes[i] = 1; // **Drag**
+                    noiseStrengths[i] = op.noiseStrength;
                 }
                 else if (op.operationType == LiquidOperation.OpType.Curl)
                 {
@@ -677,6 +705,12 @@ public class MovingScene : MonoBehaviour
                     positions[i] = new Vector4(op.data.x, op.data.y, op.data.z, op.data.w);
                     scales[i] = op.scale;   // **Drag 没有半径**
                     opTypes[i] = 3; 
+                }
+                else if (op.operationType == LiquidOperation.OpType.Wave)
+                {
+                    positions[i] = new Vector4(op.data.x, op.data.y, op.data.z, op.data.w);
+                    scales[i] = op.scale;   // **Drag 没有半径**
+                    opTypes[i] = 4; 
                 }
                 colors[i] = op.color;
             }

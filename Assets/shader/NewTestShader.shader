@@ -162,12 +162,18 @@ Shader "Unlit/NewTestShader"
                         float fade = smoothstep(radius, 0.0, distToLine);  // 法向影响
 
                         // ------- Perlin噪声扰动（模拟自然破碎边缘）-------
-                        float2 noiseCoord = displacedUV * (150.0 + noiseStrength * 800.0);
-                        float rawPerlin = perlin_noise(noiseCoord);
-                        float perlin = pow(abs(rawPerlin * 2.0 - 1.0), 3.0); // 转成 [-1,1] → [0,1] → 加强极值
+                        
+                        // float2 noiseCoord = displacedUV * (150.0 + noiseStrength * 8000.0);
+                        // float rawPerlin = perlin_noise(noiseCoord);
+                        // // float perlin = saturate(rawPerlin * 0.5 + 0.5);  // [-0.7,0.7] 映射到 [0.15,0.85]
+                        //float amplified = pow(abs(perlin - 0.5) * 2.0, 1.5); // 放大中间差异
+                        // 简洁模拟 drop 的噪声逻辑
+                        float2 offset1 = float2(0, 0); // 或者 lastOpIndex，用于让每个操作有不同噪声相位
+                        float perlin = perlin_noise(displacedUV * 50.0 + offset1);
+                        float noisePower = 1.0 + 6*noiseStrength * perlin;
 
-                        // 放大扰动
-                        float noisePower = lerp(0.5, 6.0, perlin * noiseStrength);  // 更自然地调制边缘强度
+
+                       // float noisePower = lerp(0.3, 10.0, amplified * noiseStrength);  // 更自然地调制边缘强度
 
                         // ------- 推前补后（方向一致，幅度对称）-------
                         float pushStrength = dragLength * 0.3;
@@ -373,12 +379,19 @@ Shader "Unlit/NewTestShader"
                         float radius = scale;
                         float fade = smoothstep(radius, 0.0, distToLine);
 
-                        float2 noiseCoord = displacedUV * (150.0 + noiseStrength * 800.0);
-                        float rawPerlin = perlin_noise(noiseCoord);
-                        float perlin = pow(abs(rawPerlin * 2.0 - 1.0), 3.0); // 转成 [-1,1] → [0,1] → 加强极值
+                        // float2 noiseCoord = displacedUV * (150.0 + noiseStrength * 8000.0);
+                        // float rawPerlin = perlin_noise(noiseCoord);
+                        //float perlin = saturate(rawPerlin * 0.5 + 0.5);  // [-0.7,0.7] 映射到 [0.15,0.85]
+                        //float amplified = pow(abs(perlin - 0.5) * 2.0, 1.5); // 放大中间差异
+                                                // 简洁模拟 drop 的噪声逻辑
+                        float2 offset1 = float2(j, j); // 或者 lastOpIndex，用于让每个操作有不同噪声相位
+                        float perlin = perlin_noise(displacedUV * 50.0 + offset1);
+                        float noisePower = 1.0 + 6*noiseStrength * perlin;
 
-                        // 放大扰动
-                        float noisePower = lerp(0.5, 6.0, perlin * noiseStrength); 
+
+                       // 
+
+                        //float noisePower = lerp(0.3, 10.0, amplified * noiseStrength);  
                         float pushStrength = dragLength * 0.3;
                         float2 displace = dir * pushStrength * fade * noisePower;
 
