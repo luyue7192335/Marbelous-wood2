@@ -218,55 +218,30 @@ Shader "Unlit/NewTestShader"
                         // Read drag start/end from the operation data.
                         float2 start = _AllOpData[lastOpIndex].xy;
                         float2 end   = _AllOpData[lastOpIndex].zw;
-                        float2 dragVec = end - start;
-                        float dragLength = length(dragVec);
-                        float2 mid = (start + end) * 0.5;
-                        
-                        // 2. 计算拖拽连线的法向量，用于分割画布为两半
-                        float2 n = normalize(float2(-dragVec.y, dragVec.x));
-                        
-                        // 3. 计算当前像素（displacedUV）到拖拽中线的距离 d（在法向量方向上的绝对值）
-                        float d = abs(dot(displacedUV - mid, n));
-                        
-                        // 4. 以 _AllScales[lastOpIndex] 作为参考尺度 d₀
-                        float d0 = 0.5*_AllScales[lastOpIndex];
-                        float x = d / d0;
-                        
-                        // 5. 根据 d 构造噪声偏移的映射
-                        // 当 d 接近于0时，偏移应接近1；当 d 达到 d0 时偏移为0；
-                        // 当 d 大于 d0 时，随着 d 增加，偏移逐渐平滑过渡到 -1（假设 d 的最大值取1）
-                        // float noiseOffset;
-                        //  if(d <= d0)
-                        // {
-                        //     noiseOffset = 0.5*(1.0 - pow(smoothstep(0.0, d0 , d), 2.0));
-                        // }
-                        // else
-                        // {
-                        //     noiseOffset = -0.5*smoothstep(d0, 1.0, d);
-                        // }
-                        // --- 双曲线映射：x=0->+1，x=1->0，x->∞->-1 ---
-                        float hyper = (1.0 - x*x) / (1.0 + x*x);
+                        float dragLength = length(end - start);
+                        //float noiseStrength = _AllNoiseStrength[lastOpIndex];
+                        float noiseStrength = 1;
 
-                        // --- 在 x≈1（hyper≈0）附近再做一次 smoothstep 混合，让零点过渡更柔和 ---
-                        float crossT = smoothstep(0.95, 1.05, x);
-                        float noiseOffset = lerp(hyper, 0.0, crossT);
-                                                
-                        // 6. 定义噪声密度参数，计算潜能场 ψ
-                        float noiseScale = 0.7;
-                        // modulation 可进一步调整潜能整体幅度，这里设为1（即完全依赖上面的调制）
-                        float modulation = 1.0;
-                        float psi = modulation * perlin_noise(displacedUV * noiseScale + noiseOffset);
+                        // 基础参数
+                        float curlFreq = lerp(2.0, 15.0, saturate(dragLength));         // 拖越长频率越高
+                        float curlAmp  = lerp(0.02, 0.3, noiseStrength);              // 振幅由 noise 控制
 
-                        // 7. 利用有限差分计算 ψ 在 x 和 y 方向的偏导数
+                        // Perlin Noise Curl field approximation
                         float eps = 0.001;
-                        float psi_x = (modulation * perlin_noise((displacedUV + float2(eps, 0)) * noiseScale + noiseOffset) - psi) / eps;
-                        float psi_y = (modulation * perlin_noise((displacedUV + float2(0, eps)) * noiseScale + noiseOffset) - psi) / eps;
-                        
-                        // 8. 根据论文思想计算二维流场 v = (∂ψ/∂y, -∂ψ/∂x)
-                        float2 velocity = float2(psi_y, -psi_x);
-                        
-                        // 9. 根据 _LerpFactor 平滑过渡地将速度场叠加到 UV 上
-                        displacedUV += _LerpFactor * velocity;
+
+                        // Compute partial derivatives of noise field (perlin_noise 是你已有的）
+                        float2 nCoord = displacedUV * curlFreq;
+                        float noiseBase = perlin_noise(nCoord);
+                        float noiseX = perlin_noise(nCoord + float2(eps, 0.0));
+                        float noiseY = perlin_noise(nCoord + float2(0.0, eps));
+
+                        float2 gradient = float2((noiseX - noiseBase)/eps, (noiseY - noiseBase)/eps);
+
+                        // Curl: 2D orthogonal vector
+                        float2 curlVec = float2(gradient.y, -gradient.x);
+
+                        // 应用扰动
+                        displacedUV += curlVec * curlAmp * _LerpFactor;
                         
                     }
                     else if(_OpTypes[lastOpIndex] == 4) // DRAG操作
@@ -465,58 +440,34 @@ Shader "Unlit/NewTestShader"
                             displacedUV -= m * l3 * pow(l2 / beta, 2.0);
                         }
                     }
-                    else if(_OpTypes[j] == 2) // DRAG操作（基于旋度的旋涡效果）
+                    else if(_OpTypes[j] == 2) // curl 操作
                     {
                         float2 start = _AllOpData[j].xy;
                         float2 end   = _AllOpData[j].zw;
-                        float2 dragVec = end - start;
-                        float dragLength = length(dragVec);
-                        float2 mid = (start + end) * 0.5;
-                        
-                        // 2. 计算拖拽连线的法向量，用于分割画布为两半
-                        float2 n = normalize(float2(-dragVec.y, dragVec.x));
-                        
-                        // 3. 计算当前像素（displacedUV）到拖拽中线的距离 d（在法向量方向上的绝对值）
-                        float d = abs(dot(displacedUV - mid, n));
-                        
-                        // 4. 以 _AllScales[lastOpIndex] 作为参考尺度 d₀
-                        float d0 =0.5* _AllScales[j];
-                        float x = d / d0;
-                        
-                        // 5. 根据 d 构造噪声偏移的映射
-                        // 当 d 接近于0时，偏移应接近1；当 d 达到 d0 时偏移为0；
-                        // 当 d 大于 d0 时，随着 d 增加，偏移逐渐平滑过渡到 -1（假设 d 的最大值取1）
-                        // float noiseOffset;
-                        //  if(d <= d0)
-                        // {
-                        //     noiseOffset = 0.5*(1.0 - pow(smoothstep(0.0, d0 , d), 2.0));
-                        // }
-                        // else
-                        // {
-                        //     noiseOffset = -0.5*smoothstep(d0, 1.0, d);
-                        // }
-                        // --- 双曲线映射：x=0->+1，x=1->0，x->∞->-1 ---
-                        float hyper = (1.0 - x*x) / (1.0 + x*x);
+                        float dragLength = length(end - start);
+                        //float noiseStrength = _AllNoiseStrength[j];
+                        float noiseStrength = 1;
 
-                        // --- 在 x≈1（hyper≈0）附近再做一次 smoothstep 混合，让零点过渡更柔和 ---
-                        float crossT = smoothstep(0.95, 1.05, x);
-                        float noiseOffset = lerp(hyper, 0.0, crossT);
-                        
-                        // 6. 定义噪声密度参数，计算潜能场 ψ
-                        float noiseScale = 0.7;
-                        // modulation 可进一步调整潜能整体幅度，这里设为1（即完全依赖上面的调制）
-                        float modulation = 1.0;
-                        float psi = modulation * perlin_noise(displacedUV * noiseScale + noiseOffset);
+                        // 基础参数
+                        float curlFreq = lerp(2.0, 15.0, saturate(dragLength));         // 拖越长频率越高
+                        float curlAmp  = lerp(0.02, 0.3, noiseStrength);              // 振幅由 noise 控制
 
-                        // 7. 利用有限差分计算 ψ 在 x 和 y 方向的偏导数
+                        // Perlin Noise Curl field approximation
                         float eps = 0.001;
-                        float psi_x = (modulation * perlin_noise((displacedUV + float2(eps, 0)) * noiseScale + noiseOffset) - psi) / eps;
-                        float psi_y = (modulation * perlin_noise((displacedUV + float2(0, eps)) * noiseScale + noiseOffset) - psi) / eps;
-                        
-                        // 8. 根据论文思想计算二维流场 v = (∂ψ/∂y, -∂ψ/∂x)
-                        float2 velocity = float2(psi_y, -psi_x);
-    
-                        displacedUV +=  velocity;
+
+                        // Compute partial derivatives of noise field (perlin_noise 是你已有的）
+                        float2 nCoord = displacedUV * curlFreq;
+                        float noiseBase = perlin_noise(nCoord);
+                        float noiseX = perlin_noise(nCoord + float2(eps, 0.0));
+                        float noiseY = perlin_noise(nCoord + float2(0.0, eps));
+
+                        float2 gradient = float2((noiseX - noiseBase)/eps, (noiseY - noiseBase)/eps);
+
+                        // Curl: 2D orthogonal vector
+                        float2 curlVec = float2(gradient.y, -gradient.x);
+
+                        // 应用扰动
+                        displacedUV += curlVec * curlAmp;
                         
                         
                         
