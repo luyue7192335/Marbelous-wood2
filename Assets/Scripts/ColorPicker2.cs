@@ -101,7 +101,7 @@ public class ColorPicker2 : MonoBehaviour
         const int buttonsPerRow = 10;
         const float buttonSize = 60f;
         const float startX = 290f;
-        const float startY = 0f;
+        const float startY = -130f;
 
         // 计算位置
         int row = index / buttonsPerRow;
