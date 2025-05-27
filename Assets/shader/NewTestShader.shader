@@ -109,8 +109,8 @@ Shader "Unlit/NewTestShader"
                     if(_OpTypes[lastOpIndex] == 0) // DROP操作
                     {
                         float2 dropPos = _AllOpData[lastOpIndex].xy;
-                        float baseRadius = _AllOpData[lastOpIndex].z;
-                        float noiseStrength = 5*_AllNoiseStrength[lastOpIndex];
+                        float baseRadius = 0.5*_AllOpData[lastOpIndex].z;
+                        float noiseStrength = _AllNoiseStrength[lastOpIndex];
                         
                         // 动态半径计算（带时间插值）
                         float dynamicRadius = lerp(0.0, baseRadius, _LerpFactor);
@@ -143,7 +143,7 @@ Shader "Unlit/NewTestShader"
                     {
                         float2 start = _AllOpData[lastOpIndex].xy;
                         float2 end   = _AllOpData[lastOpIndex].zw;
-                        float scale  = _AllScales[lastOpIndex];
+                        float scale  = 0.5*_AllScales[lastOpIndex];
                         float noiseStrength = _AllNoiseStrength[lastOpIndex];
                         float dynamicScale = lerp(0.0, scale, _LerpFactor);
 
@@ -223,8 +223,13 @@ Shader "Unlit/NewTestShader"
                         float noiseStrength = 1;
 
                         // 基础参数
-                        float curlFreq = lerp(2.0, 15.0, saturate(dragLength));         // 拖越长频率越高
-                        float curlAmp  = lerp(0.02, 0.3, noiseStrength);              // 振幅由 noise 控制
+                        float freqControl = saturate(_AllScales[lastOpIndex]);           // 0–1，决定卷曲频率
+                        float ampControl  = saturate(_AllNoiseStrength[lastOpIndex]); 
+                        float curlFreq = lerp(2.0, 25.0, freqControl);          
+                        // 振幅调节：控制扰动强弱
+                        float curlAmp  = lerp(0.01, 0.3, ampControl);  
+                        // float curlFreq = lerp(2.0, 15.0, saturate(dragLength));         // 拖越长频率越高
+                        // float curlAmp  = lerp(0.02, 0.3, noiseStrength);              // 振幅由 noise 控制
 
                         // Perlin Noise Curl field approximation
                         float eps = 0.001;
@@ -254,8 +259,8 @@ Shader "Unlit/NewTestShader"
                         
                         float2 start = _AllOpData[lastOpIndex].xy;
                         float2 end = _AllOpData[lastOpIndex].zw;
-                        float baseScale = _AllScales[lastOpIndex];
-                        float noiseStrength = 4*_AllNoiseStrength[lastOpIndex];
+                        float baseScale = 0.5*_AllScales[lastOpIndex];
+                        float noiseStrength = 2*_AllNoiseStrength[lastOpIndex];
                         
                         // 动态缩放系数
                         float dynamicScale = lerp(0.0, baseScale, _LerpFactor);
@@ -266,7 +271,7 @@ Shader "Unlit/NewTestShader"
                         float dragLength = length(dragVec);
                         if(dragLength < 0.01) return tex2D(_MainTex, displacedUV);
                         
-                       float2 dir = dragVec / dragLength;  // 方向
+                        float2 dir = dragVec / dragLength;  // 方向
                             float2 offset = displacedUV - start;
 
                             float along = dot(offset, dir);                  // 轴向位置
@@ -306,10 +311,10 @@ Shader "Unlit/NewTestShader"
                     if(_OpTypes[j] == 0) // DROP 操作
                     {
                         float2 dropPos = _AllOpData[j].xy;
-                        float radius = _AllOpData[j].z;
+                        float radius =0.5* _AllOpData[j].z;
                         fixed4 dropColor = _AllColors[j];
 
-                        float noiseStrength = 5*_AllNoiseStrength[j];
+                        float noiseStrength = _AllNoiseStrength[j];
                         // 这里以 dropPos 作为噪声参考，也可以使用 displacedUV，以保证整个圆边的连续性
                         float2 offset = float2(j, j); 
                         //float noiseVal = perlin_noise(displacedUV * 50.0 + offset); 
@@ -379,8 +384,8 @@ Shader "Unlit/NewTestShader"
                     {
                             float2 start = _AllOpData[j].xy;
                             float2 end   = _AllOpData[j].zw;
-                            float scale  = _AllScales[j];
-                            float noiseStrength =4*_AllNoiseStrength[j];
+                            float scale  = 0.5*_AllScales[j];
+                            float noiseStrength =2*_AllNoiseStrength[j];
 
                             float2 dragVec = start-end ;
                             float dragLength = length(dragVec);
@@ -449,8 +454,14 @@ Shader "Unlit/NewTestShader"
                         float noiseStrength = 1;
 
                         // 基础参数
-                        float curlFreq = lerp(2.0, 15.0, saturate(dragLength));         // 拖越长频率越高
-                        float curlAmp  = lerp(0.02, 0.3, noiseStrength);              // 振幅由 noise 控制
+                        float freqControl = saturate(_AllScales[j]);           // 0–1，决定卷曲频率
+                        float ampControl  = saturate(_AllNoiseStrength[j]); 
+                        float curlFreq = lerp(2.0, 25.0, freqControl);          
+                        // 振幅调节：控制扰动强弱
+                        float curlAmp  = lerp(0.01, 0.3, ampControl);  
+
+                        // float curlFreq = lerp(2.0, 15.0, saturate(dragLength));         // 拖越长频率越高
+                        // float curlAmp  = lerp(0.02, 0.3, noiseStrength);              // 振幅由 noise 控制
 
                         // Perlin Noise Curl field approximation
                         float eps = 0.001;
@@ -468,9 +479,7 @@ Shader "Unlit/NewTestShader"
 
                         // 应用扰动
                         displacedUV += curlVec * curlAmp;
-                        
-                        
-                        
+                    
                       
                         }
                     

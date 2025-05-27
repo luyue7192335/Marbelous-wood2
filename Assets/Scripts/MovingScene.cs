@@ -60,11 +60,12 @@ public class MovingScene : MonoBehaviour
             this.noiseStrength = noiseStrength;
         }
 
-         public LiquidOperation(Vector2 startPos, float scale, Vector2 endPos)
+         public LiquidOperation(Vector2 startPos, float scale, Vector2 endPos, float noiseStrength, bool isCurl)
         {
             operationType = OpType.Curl;
             data = new Vector4(startPos.x, startPos.y, endPos.x, endPos.y);
             this.scale = scale; 
+            this.noiseStrength = noiseStrength;
         }
 
         // .Comb构造器
@@ -119,6 +120,8 @@ public class MovingScene : MonoBehaviour
     private bool isDragging = false;  // **新增变量：用于判断是否处于拖拽状态**
     private Vector2 dragStartUV;  // **新增变量：存储拖拽起点**
 
+    private bool _isTransitioning = false;
+
     public enum ToolMode
     {
         None,
@@ -166,6 +169,7 @@ public class MovingScene : MonoBehaviour
         //    Debug.Log($" lock the click");
         //     return;
         // }
+        //Debug.Log($"LerpFactor: {_currentLerpFactor}");
         
 
         if (Input.GetMouseButtonDown(0))
@@ -266,7 +270,7 @@ public class MovingScene : MonoBehaviour
                         break;
 
                     case ToolMode.Curl:
-                        _operationQueue.Add(new LiquidOperation(dragStartUV, dropRadius, dragEndUV));
+                        _operationQueue.Add(new LiquidOperation(dragStartUV, dropRadius, dragEndUV,noiseStrength,true));
                         Debug.Log($" Curl Completed from {dragStartUV} to {dragEndUV}");
                         break;
 
@@ -296,129 +300,7 @@ public class MovingScene : MonoBehaviour
     }
 
 
-    // void HandleDrop()
-    // {
-    //     Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-    //     RaycastHit hit;
-
-    //     if (Physics.Raycast(ray, out hit))
-    //     {
-    //         MeshCollider meshCollider = hit.collider.GetComponent<MeshCollider>();
-    //         if (meshCollider == null) return;
-
-    //         Vector2 pixelUV = hit.textureCoord;
-    //         if (!IsValidUV(pixelUV)) return;
-
-    //         //AddNewOperation(new LiquidOperation(pixelUV, dropRadius, selectedColor));
-    //         _operationQueue.Add(new LiquidOperation(pixelUV, dropRadius, selectedColor, noiseStrength));
-    //         Debug.Log($" Drop Added at {pixelUV}");
-    //     }
-    // }
-
-    // void HandleDrag()
-    // {
-    //     if (Input.GetMouseButtonDown(0))
-    //     {
-    //         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-    //         RaycastHit hit;
-    //         if (Physics.Raycast(ray, out hit))
-    //         {
-    //             dragStartUV = hit.textureCoord;
-    //             isDragging = true;
-    //             Debug.Log($"🔹 Drag Start: {dragStartUV}");
-    //         }
-    //     }
-        
-    //     if (Input.GetMouseButtonUp(0) && isDragging)
-    //     {
-    //         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-    //         RaycastHit hit;
-    //         if (Physics.Raycast(ray, out hit))
-    //         {
-    //             Vector2 dragEndUV = hit.textureCoord;
-    //             if (!IsValidUV(dragEndUV)) return;
-
-    //             if (Vector2.Distance(dragStartUV, dragEndUV) > 0.01f)
-    //             {
-    //                 //AddNewOperation(new LiquidOperation(dragStartUV, dragEndUV, dropRadius));
-    //                  _operationQueue.Add(new LiquidOperation(dragStartUV, dragEndUV, dropRadius));
-          
-    //                 Debug.Log($" Drag Completed from {dragStartUV} to {dragEndUV}");
-    //             }
-    //         }
-    //         isDragging = false;
-    //     }
-    // }
-
-    // void HandleComb()
-    // {
-    //     if (Input.GetMouseButtonDown(0))
-    //     {
-    //         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-    //         RaycastHit hit;
-    //         if (Physics.Raycast(ray, out hit))
-    //         {
-    //             dragStartUV = hit.textureCoord;
-    //             isDragging = true;
-    //             Debug.Log($"🔹 comb Start");
-    //         }
-    //     }
-        
-    //     if (Input.GetMouseButtonUp(0) && isDragging)
-    //     {
-    //         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-    //         RaycastHit hit;
-    //         if (Physics.Raycast(ray, out hit))
-    //         {
-    //             Vector2 dragEndUV = hit.textureCoord;
-    //             if (!IsValidUV(dragEndUV)) return;
-
-    //             if (Vector2.Distance(dragStartUV, dragEndUV) > 0.01f)
-    //             {
-    //                 //AddNewOperation(new LiquidOperation(dragStartUV, dragEndUV, dropRadius));
-    //                  _operationQueue.Add(new LiquidOperation(dragStartUV, dropRadius,dragEndUV,true));
-          
-    //                 Debug.Log($" comb Completed from {dragStartUV} to {dragEndUV}");
-    //             }
-    //         }
-    //         isDragging = false;
-    //     }
-    // }
-
-    // void HandleCurl()
-    // {
-    //     if (Input.GetMouseButtonDown(0))
-    //     {
-    //         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-    //         RaycastHit hit;
-    //         if (Physics.Raycast(ray, out hit))
-    //         {
-    //             dragStartUV = hit.textureCoord;
-    //             isDragging = true;
-    //             Debug.Log($"🔹 curl Start: {dragStartUV}");
-    //         }
-    //     }
-        
-    //     if (Input.GetMouseButtonUp(0) && isDragging)
-    //     {
-    //         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-    //         RaycastHit hit;
-    //         if (Physics.Raycast(ray, out hit))
-    //         {
-    //             Vector2 dragEndUV = hit.textureCoord;
-    //             if (!IsValidUV(dragEndUV)) return;
-
-    //             if (Vector2.Distance(dragStartUV, dragEndUV) > 0.01f)
-    //             {
-    //                 //AddNewOperation(new LiquidOperation(dragStartUV, dragEndUV, dropRadius));
-    //                  _operationQueue.Add(new LiquidOperation(dragStartUV,  dropRadius, dragEndUV));
-          
-    //                 Debug.Log($" curl Completed from {dragStartUV} to {dragEndUV}");
-    //             }
-    //         }
-    //         isDragging = false;
-    //     }
-    // }
+  
 
     void GenerateVariations() {
         
@@ -475,38 +357,93 @@ public class MovingScene : MonoBehaviour
             && uv.y >= 0 && uv.y <= 1;
     }
 
+    // void AddNewOperation(LiquidOperation operation)
+    // {
+    //     // **管理列表长度**
+    //     if (allOperations.Count >= maxOperations) allOperations.RemoveAt(0);
+    //     allOperations.Add(operation);
+    //     Debug.Log(allOperations.Count);
+
+    //     if (_activeTransition != null) StopCoroutine(_activeTransition);
+    //     _activeTransition = StartCoroutine(TransitionRoutine());
+
+    //     UpdateShaderData();
+    // }
+
+    // private IEnumerator TransitionRoutine()
+    // {
+    //     float timer = 0f;
+    //     _currentLerpFactor = 0f;  // 重置过渡进度
+        
+    //     while(timer < transitionDuration)
+    //     {
+    //         timer += Time.deltaTime;
+    //         _currentLerpFactor = Mathf.Clamp01(timer / transitionDuration);
+    //         //Debug.Log(_currentLerpFactor);
+    //         UpdateShaderData();  // 实时更新LerpFactor
+    //         yield return null;
+
+    //     }
+        
+    //     _currentLerpFactor = 1f;
+    //     UpdateShaderData();
+    //     _activeTransition = null;
+    // }
+    //private Coroutine _activeTransition = null;
+    private float transitionSpeedMultiplier = 1f;
     void AddNewOperation(LiquidOperation operation)
     {
-        // **管理列表长度**
-        if (allOperations.Count >= maxOperations) allOperations.RemoveAt(0);
+        // 限制操作数量
+        if (allOperations.Count >= maxOperations)
+            allOperations.RemoveAt(0);
+
         allOperations.Add(operation);
         Debug.Log(allOperations.Count);
 
-        if (_activeTransition != null) StopCoroutine(_activeTransition);
+        // 如果已有过渡在执行，先停止它，并加速
+        if (_isTransitioning)
+        {
+            StopCoroutine(_activeTransition);
+            Debug.Log("speed up _currentLerpFactor");
+            transitionSpeedMultiplier = 3f;  // ← 加速旧动画完成
+        }
+        else
+        {
+            transitionSpeedMultiplier = 1f;  // ← 正常速度
+            Debug.Log("no speed up _currentLerpFactor");
+        }
+
+        // 启动新的过渡
         _activeTransition = StartCoroutine(TransitionRoutine());
 
+        // 更新 shader 数据
         UpdateShaderData();
     }
 
     private IEnumerator TransitionRoutine()
     {
         float timer = 0f;
-        _currentLerpFactor = 0f;  // 重置过渡进度
-        
-        while(timer < transitionDuration)
-        {
-            timer += Time.deltaTime;
-            _currentLerpFactor = Mathf.Clamp01(timer / transitionDuration);
-            //Debug.Log(_currentLerpFactor);
-            UpdateShaderData();  // 实时更新LerpFactor
-            yield return null;
+        _currentLerpFactor = 0f;
+        _isTransitioning = true; 
 
+        float duration = transitionDuration;
+
+        while (timer < duration)
+        {
+            timer += Time.deltaTime * transitionSpeedMultiplier;
+            _currentLerpFactor = Mathf.Clamp01(timer / duration);
+            UpdateShaderData();
+            yield return null;
         }
-        
+
         _currentLerpFactor = 1f;
+        transitionSpeedMultiplier = 1f; 
         UpdateShaderData();
         _activeTransition = null;
+        _isTransitioning = false;
     }
+
+
 
     public void RevertSimplified()
     {
@@ -538,39 +475,7 @@ public class MovingScene : MonoBehaviour
         
     }
 
-    // private void ActivateBasicDropTool()
-    // {
-    //     isBasicDropActive = true;
-    //     isCurlActive = false;
-    //     isDragActive = false; // **确保只激活一个工具**
-    //     isCombActive = false;
-    // }
-
-    // public void ActivateDragTool()
-    // {
-    //     isBasicDropActive = false;
-    //     isDragActive = true;
-    //     isCurlActive = false;
-    //     isCombActive = false;
-    //     Debug.Log(" Drag Tool Activated");
-    // }
-
-    // public void ActivateCurlTool()
-    // {
-    //     isBasicDropActive = false;
-    //     isDragActive = false;
-    //     isCurlActive = true;
-    //     isCombActive = false;
-    //     Debug.Log(" Curl Tool Activated");
-    // }
-    // public void ActivateCombTool()
-    // {
-    //     isBasicDropActive = false;
-    //     isDragActive = false;
-    //     isCurlActive = false;
-    //     isCombActive = true;
-    //     Debug.Log(" Comb Tool Activated");
-    // }
+   
 
     public void ActivateBasicDropTool()
     {
@@ -699,6 +604,7 @@ public class MovingScene : MonoBehaviour
                     positions[i] = new Vector4(op.data.x, op.data.y, op.data.z, op.data.w);
                     scales[i] = op.scale;   
                     opTypes[i] = 2; 
+                    noiseStrengths[i] = op.noiseStrength;
                 }
                 else if (op.operationType == LiquidOperation.OpType.Comb)
                 {
@@ -711,6 +617,7 @@ public class MovingScene : MonoBehaviour
                     positions[i] = new Vector4(op.data.x, op.data.y, op.data.z, op.data.w);
                     scales[i] = op.scale;   // **Drag 没有半径**
                     opTypes[i] = 4; 
+                    noiseStrengths[i] = op.noiseStrength;
                 }
                 colors[i] = op.color;
             }
