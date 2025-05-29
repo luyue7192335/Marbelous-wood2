@@ -124,8 +124,8 @@ public class PlaneZoomController : MonoBehaviour
         if (newScale.x > originalScale.x * maxZoom)
             newScale = originalScale * maxZoom;
 
-        Vector3 offset = planeTransform.position - worldPoint;
-        Vector3 newPosition = worldPoint + offset / zoomFactor;
+        Vector3 offset = 1*(planeTransform.position - worldPoint);
+        Vector3 newPosition = worldPoint + 2*offset / zoomFactor;
 
         targetScale = newScale;
         targetPosition = newPosition;

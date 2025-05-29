@@ -13,6 +13,9 @@ Shader "Unlit/NewTestShader"
 
         Pass
         {
+            Blend Off
+            ZWrite On
+            Cull Off
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
@@ -20,6 +23,8 @@ Shader "Unlit/NewTestShader"
 
             #define MAX_OPS 100
             #define LAMBDA 0.02
+
+           
 
             struct appdata
             {
@@ -41,7 +46,7 @@ Shader "Unlit/NewTestShader"
             int _OpCount;
             float4 _AllOpData[MAX_OPS];
             float _AllScales[MAX_OPS];
-            fixed4 _AllColors[MAX_OPS];
+            float4 _AllColors[MAX_OPS];
             int _OpTypes[MAX_OPS];
             float _AllNoiseStrength[MAX_OPS];
 
@@ -130,7 +135,21 @@ Shader "Unlit/NewTestShader"
                         if(dist <= dynamicRadiusNoisy)
                         {
                             // 进入动态区域时返回颜色
-                            return _AllColors[lastOpIndex]; 
+                            //return _AllColors[lastOpIndex]; 
+                            //return float4(_AllColors[lastOpIndex].rgb, 1.0);
+
+                            // float4 baseColor = _AllColors[lastOpIndex];
+                            // baseColor.a = 1.0; // 避免因透明而变灰
+                            // baseColor.rgb = pow(baseColor.rgb, 1.0 / 2.2); // 若你用的是 Linear 色彩空间（需测试）
+                            // return baseColor;
+
+                            float4 baseColor = _AllColors[lastOpIndex];
+                            baseColor.a = 1.0; // 避免因透明而变灰
+                            baseColor.rgb = pow(baseColor.rgb, 1.0 / 0.5); // 若你用的是 Linear 色彩空间（需测试）
+                            return baseColor;
+
+
+
                         }
                         else
                         {
@@ -213,7 +232,7 @@ Shader "Unlit/NewTestShader"
                         }
                     }
 
-                    else if(_OpTypes[lastOpIndex] == 2) // DRAG operation (curl-noise based vortex effect)
+                    else if(_OpTypes[lastOpIndex] == 2) // curl-noise based vortex effect)
                     {
                         // Read drag start/end from the operation data.
                         float2 start = _AllOpData[lastOpIndex].xy;
@@ -249,7 +268,7 @@ Shader "Unlit/NewTestShader"
                         displacedUV += curlVec * curlAmp * _LerpFactor;
                         
                     }
-                    else if(_OpTypes[lastOpIndex] == 4) // DRAG操作
+                    else if(_OpTypes[lastOpIndex] == 4) // wave操作
                     {
                         // #define LAMBDA 0.02
                         // #define FALLOFF 1.0
@@ -312,7 +331,7 @@ Shader "Unlit/NewTestShader"
                     {
                         float2 dropPos = _AllOpData[j].xy;
                         float radius =0.5* _AllOpData[j].z;
-                        fixed4 dropColor = _AllColors[j];
+                        float4 dropColor = _AllColors[j];
 
                         float noiseStrength = _AllNoiseStrength[j];
                         // 这里以 dropPos 作为噪声参考，也可以使用 displacedUV，以保证整个圆边的连续性
@@ -335,7 +354,17 @@ Shader "Unlit/NewTestShader"
                         }
                         else
                         {
-                            return dropColor;
+                            //return dropColor;
+                            //return float4(_AllColors[lastOpIndex].rgb, 1.0);
+                            // float4 baseColor = _AllColors[j];
+                            // baseColor.a = 1.0; // 避免因透明而变灰
+                            // baseColor.rgb = pow(baseColor.rgb, 1.0 / 2.2); // 若你用的是 Linear 色彩空间（需测试）
+                            // return baseColor;
+
+                            float4 baseColor = _AllColors[j];
+                            baseColor.a = 1.0; // 避免因透明而变灰
+                            baseColor.rgb = pow(baseColor.rgb, 1.0 / 0.5); // 若你用的是 Linear 色彩空间（需测试）
+                            return baseColor;
                         }
                     }
                     else if (_OpTypes[j] == 1) // DRAG 操作（推前补后 + 噪声扰动）

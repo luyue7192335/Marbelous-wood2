@@ -99,7 +99,7 @@ public class MovingScene : MonoBehaviour
     private Color selectedColor = Color.blue;
     private float dropRadius = 0.1f;
     private float noiseStrength = 0;
-    private float dragBrushSize = 0.1f;
+    //private float dragBrushSize = 0.1f;
 
     [Header("UI Controls")]
     [SerializeField] private GameObject toolsPanel;
@@ -657,7 +657,7 @@ public class MovingScene : MonoBehaviour
                 var op = ops[i];
                 pa[i] = op.data;
                 sc[i] = op.scale;
-                co[i] = op.color;
+                co[i] = op.color.linear;
                 ns[i] = op.noiseStrength;
                 tp[i] = (float)op.operationType;
             } else {
