@@ -113,10 +113,7 @@ public class MovingScene : MonoBehaviour
     [SerializeField] private TMP_Text sizeText;
     [SerializeField] private TMP_Text noiseText;
 
-    // private bool isBasicDropActive = false;
-    // private bool isDragActive = false;
-    // private bool isCurlActive = false;
-    // private bool isCombActive = false;
+   
     private bool isDragging = false;  // **新增变量：用于判断是否处于拖拽状态**
     private Vector2 dragStartUV;  // **新增变量：存储拖拽起点**
 
@@ -480,26 +477,36 @@ public class MovingScene : MonoBehaviour
     public void ActivateBasicDropTool()
     {
         currentToolMode = ToolMode.Drop;
+        sizeSlider.gameObject.SetActive(true);
+        noiseSlider.gameObject.SetActive(true);
     }
 
     public void ActivateDragTool()
     {
         currentToolMode = ToolMode.Drag;
+        sizeSlider.gameObject.SetActive(true);
+        noiseSlider.gameObject.SetActive(true);
     }
 
     public void ActivateCurlTool()
     {
         currentToolMode = ToolMode.Curl;
+        sizeSlider.gameObject.SetActive(true);
+        noiseSlider.gameObject.SetActive(true);
     }
 
     public void ActivateCombTool()
     {
         currentToolMode = ToolMode.Comb;
+        sizeSlider.gameObject.SetActive(true);
+        noiseSlider.gameObject.SetActive(false);
     }
 
     public void ActivateWaveTool()
     {
         currentToolMode = ToolMode.Wave;
+        sizeSlider.gameObject.SetActive(true);
+        noiseSlider.gameObject.SetActive(true);
     }
 
     public void ActivateZoomTool()

@@ -180,6 +180,19 @@ Shader "Unlit/NewTestShader"
                         float radius = dynamicScale;
                         float fade = smoothstep(radius, 0.0, distToLine);  // 法向影响
 
+                        float distToStart = length(displacedUV - end);
+                        //float axisFade = smoothstep(3*radius, 0.0, distToStart);
+                        //float axisFade = smoothstep(dragLength , 0.0, abs(along - dragLength * 0.5));
+                        //float axisFade = smoothstep(0.0-1 * dragLength, 0.5 * dragLength-1 * dragLength, along) * smoothstep(dragLength-1 * dragLength, 0.5 * dragLength-1 * dragLength, along);
+                        float axisFadeFront = smoothstep(-0.5 * dragLength, 0.0, along); // 起点之前区域渐变
+                        float axisFadeBack  = smoothstep(dragLength, 0.5 * dragLength, along); // 终点之后渐变
+                        float axisFade = axisFadeFront * axisFadeBack;
+
+
+
+
+                        float totalFade = fade * axisFade;
+
                         // ------- Perlin噪声扰动（模拟自然破碎边缘）-------
                         
                         // float2 noiseCoord = displacedUV * (150.0 + noiseStrength * 8000.0);
@@ -195,9 +208,9 @@ Shader "Unlit/NewTestShader"
                        // float noisePower = lerp(0.3, 10.0, amplified * noiseStrength);  // 更自然地调制边缘强度
 
                         // ------- 推前补后（方向一致，幅度对称）-------
-                        float pushStrength = dragLength * 0.3;
+                        float pushStrength = dragLength * 0.6;
 
-                        float2 displace = dir * pushStrength * fade * noisePower;
+                        float2 displace = dir * pushStrength * totalFade * noisePower;
 
 
                             displacedUV += displace;   // 前推
@@ -388,21 +401,35 @@ Shader "Unlit/NewTestShader"
                         float radius = scale;
                         float fade = smoothstep(radius, 0.0, distToLine);
 
+                        float distToStart = length(displacedUV - end);
+                        //float axisFade = smoothstep(dragLength , 0.0, abs(along - dragLength * 0.5));
+                        //float axisFade = smoothstep(0.0-1 * dragLength, 0.5 * dragLength-1 * dragLength, along) * smoothstep(dragLength-1 * dragLength, 0.5 * dragLength-1 * dragLength, along);
+                        float axisFadeFront = smoothstep(-0.5 * dragLength, 0.0, along); // 起点之前区域渐变
+                        float axisFadeBack  = smoothstep(dragLength, 0.5 * dragLength, along); // 终点之后渐变
+                        float axisFade = axisFadeFront * axisFadeBack;
+
+
+
+                        //float axisFade = smoothstep(3*radius, 0.0, distToStart);
+
+                        float totalFade = fade * axisFade;
+
+
                         // float2 noiseCoord = displacedUV * (150.0 + noiseStrength * 8000.0);
                         // float rawPerlin = perlin_noise(noiseCoord);
                         //float perlin = saturate(rawPerlin * 0.5 + 0.5);  // [-0.7,0.7] 映射到 [0.15,0.85]
                         //float amplified = pow(abs(perlin - 0.5) * 2.0, 1.5); // 放大中间差异
                                                 // 简洁模拟 drop 的噪声逻辑
-                        float2 offset1 = float2(j, j); // 或者 lastOpIndex，用于让每个操作有不同噪声相位
+                        float2 offset1 = float2(0, 0); // 或者 lastOpIndex，用于让每个操作有不同噪声相位
                         float perlin = perlin_noise(displacedUV * 50.0 + offset1);
                         float noisePower = 1.0 + 6*noiseStrength * perlin;
 
 
-                       // 
+                        
 
                         //float noisePower = lerp(0.3, 10.0, amplified * noiseStrength);  
-                        float pushStrength = dragLength * 0.3;
-                        float2 displace = dir * pushStrength * fade * noisePower;
+                        float pushStrength = dragLength * 0.6;
+                        float2 displace = dir * pushStrength * totalFade * noisePower;
 
                         
                         displacedUV += displace;
