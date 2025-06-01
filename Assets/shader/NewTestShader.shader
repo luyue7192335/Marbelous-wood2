@@ -178,15 +178,30 @@ Shader "Unlit/NewTestShader"
                         float distToLine = length(displacedUV - closest);
 
                         float radius = dynamicScale;
-                        float fade = smoothstep(radius, 0.0, distToLine);  // 法向影响
+                        float fade = smoothstep(radius* 1.1, 0.0, distToLine);  // 法向影响
 
-                        float distToStart = length(displacedUV - end);
-                        //float axisFade = smoothstep(3*radius, 0.0, distToStart);
-                        //float axisFade = smoothstep(dragLength , 0.0, abs(along - dragLength * 0.5));
-                        //float axisFade = smoothstep(0.0-1 * dragLength, 0.5 * dragLength-1 * dragLength, along) * smoothstep(dragLength-1 * dragLength, 0.5 * dragLength-1 * dragLength, along);
-                        float axisFadeFront = smoothstep(-0.5 * dragLength, 0.0, along); // 起点之前区域渐变
-                        float axisFadeBack  = smoothstep(dragLength, 0.5 * dragLength, along); // 终点之后渐变
-                        float axisFade = axisFadeFront * axisFadeBack;
+                        // float distToStart = length(displacedUV - end);
+                        // //float axisFade = smoothstep(3*radius, 0.0, distToStart);
+                        // //float axisFade = smoothstep(dragLength , 0.0, abs(along - dragLength * 0.5));
+                        // //float axisFade = smoothstep(0.0-1 * dragLength, 0.5 * dragLength-1 * dragLength, along) * smoothstep(dragLength-1 * dragLength, 0.5 * dragLength-1 * dragLength, along);
+                        // float axisFadeFront = smoothstep(-0.5 * dragLength, 0.0, along); // 起点之前区域渐变
+                        // float axisFadeBack  = smoothstep(dragLength, 0.5 * dragLength, along); // 终点之后渐变
+                        // float axisFade = axisFadeFront * axisFadeBack;
+                        // 中点位置
+                        float2 midPoint = 0.5 * (start + end);
+
+                        // 法向方向（dir 的垂直方向）
+                        float2 normalDir = float2(-dir.y, dir.x);
+
+                        // displacedUV 到中垂线的投影距离
+                        float2 toUV = displacedUV - midPoint;
+                        float distToMidLine = dot(toUV, normalDir);  // 正负都可接受
+                        float distToCenter = abs(dot(displacedUV - midPoint, dir));
+
+                        // 用 smoothstep 做对称衰减
+                        //float axisFade = smoothstep(radius, 0.0, abs(distToMidLine));
+                        float axisFade = smoothstep(1.7 * dragLength, 0.0, distToCenter);
+
 
 
 
@@ -397,16 +412,33 @@ Shader "Unlit/NewTestShader"
                         float along = dot(offset, dir);
                         float2 closest = start + dir * along;
                         float distToLine = length(displacedUV - closest);
-
+                        
                         float radius = scale;
-                        float fade = smoothstep(radius, 0.0, distToLine);
+                        float fade = smoothstep(radius* 1.1, 0.0, distToLine);
+                        
+                        // float distToStart = length(displacedUV - end);
+                        // //float axisFade = smoothstep(dragLength , 0.0, abs(along - dragLength * 0.5));
+                        // //float axisFade = smoothstep(0.0-1 * dragLength, 0.5 * dragLength-1 * dragLength, along) * smoothstep(dragLength-1 * dragLength, 0.5 * dragLength-1 * dragLength, along);
+                        // float axisFadeFront = smoothstep(-0.5 * dragLength, 0.0, along); // 起点之前区域渐变
+                        // float axisFadeBack  = smoothstep(dragLength, 0.5 * dragLength, along); // 终点之后渐变
+                        // float axisFade = axisFadeFront * axisFadeBack;
+                        float2 midPoint = 0.5 * (start + end);
 
-                        float distToStart = length(displacedUV - end);
-                        //float axisFade = smoothstep(dragLength , 0.0, abs(along - dragLength * 0.5));
-                        //float axisFade = smoothstep(0.0-1 * dragLength, 0.5 * dragLength-1 * dragLength, along) * smoothstep(dragLength-1 * dragLength, 0.5 * dragLength-1 * dragLength, along);
-                        float axisFadeFront = smoothstep(-0.5 * dragLength, 0.0, along); // 起点之前区域渐变
-                        float axisFadeBack  = smoothstep(dragLength, 0.5 * dragLength, along); // 终点之后渐变
-                        float axisFade = axisFadeFront * axisFadeBack;
+                        // 法向方向（dir 的垂直方向）
+                        float2 normalDir = float2(-dir.y, dir.x);
+                        
+
+
+                        // displacedUV 到中垂线的投影距离
+                        float2 toUV = displacedUV - midPoint;
+                        float distToMidLine = dot(toUV, normalDir);  // 正负都可接受
+                        float distToCenter = abs(dot(displacedUV - midPoint, dir));
+
+                        // 用 smoothstep 做对称衰减
+                        //float axisFade = smoothstep(radius, 0.0, abs(distToMidLine));
+                        float axisFade = smoothstep(1.7 * dragLength, 0.0, distToCenter);
+
+
 
 
 
