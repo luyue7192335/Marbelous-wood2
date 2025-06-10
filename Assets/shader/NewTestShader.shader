@@ -145,7 +145,7 @@ Shader "Unlit/NewTestShader"
 
                             float4 baseColor = _AllColors[lastOpIndex];
                             baseColor.a = 1.0; // 避免因透明而变灰
-                            baseColor.rgb = pow(baseColor.rgb, 1.0 / 0.5); // 若你用的是 Linear 色彩空间（需测试）
+                            baseColor.rgb = pow(baseColor.rgb, 1.5 / 0.5); // 若你用的是 Linear 色彩空间（需测试）
                             return baseColor;
 
 
@@ -393,7 +393,7 @@ Shader "Unlit/NewTestShader"
 
                             float4 baseColor = _AllColors[j];
                             baseColor.a = 1.0; // 避免因透明而变灰
-                            baseColor.rgb = pow(baseColor.rgb, 1.0 / 0.5); // 若你用的是 Linear 色彩空间（需测试）
+                            baseColor.rgb = pow(baseColor.rgb, 1.5 / 0.5); // 若你用的是 Linear 色彩空间（需测试）
                             return baseColor;
                         }
                     }
