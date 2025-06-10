@@ -112,6 +112,12 @@ public class MovingScene : MonoBehaviour
     [SerializeField] private Slider noiseSlider;
     [SerializeField] private TMP_Text sizeText;
     [SerializeField] private TMP_Text noiseText;
+    [SerializeField] private Button zoomButton;
+    [SerializeField] private Button zoomOutButton;
+
+    [SerializeField] private Color activeColor = new Color(0.85f, 0.85f, 0.85f);
+    [SerializeField] private Color inactiveColor = Color.white;
+
 
    
     private bool isDragging = false;  // **新增变量：用于判断是否处于拖拽状态**
@@ -151,6 +157,8 @@ public class MovingScene : MonoBehaviour
         noiseSlider.onValueChanged.AddListener(OnNoiseSliderChanged);
         generateButton.onClick.AddListener(GenerateVariations);
         exitGenerateButton.onClick.AddListener(ExitVariationMode);
+        zoomButton.onClick.AddListener(ActivateZoomTool);
+        zoomOutButton.onClick.AddListener(ActivateZoomOutTool);
 
         for (int i = 0; i < 4; i++) {
             // 假设你的画布是 512×512，按需调整
@@ -173,6 +181,11 @@ public class MovingScene : MonoBehaviour
         {
             
 
+            if (UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+            {
+                Debug.Log("Click is on UI, ignore.");
+                return;
+            }
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
 
@@ -479,6 +492,7 @@ public class MovingScene : MonoBehaviour
         currentToolMode = ToolMode.Drop;
         sizeSlider.gameObject.SetActive(true);
         noiseSlider.gameObject.SetActive(true);
+        HighlightButton(dropButton);
     }
 
     public void ActivateDragTool()
@@ -486,13 +500,17 @@ public class MovingScene : MonoBehaviour
         currentToolMode = ToolMode.Drag;
         sizeSlider.gameObject.SetActive(true);
         noiseSlider.gameObject.SetActive(true);
+        //UpdateToolHighlight();
+        HighlightButton(dragButton);
     }
 
     public void ActivateCurlTool()
     {
         currentToolMode = ToolMode.Curl;
         sizeSlider.gameObject.SetActive(true);
-        noiseSlider.gameObject.SetActive(true);
+        noiseSlider.gameObject.SetActive(false);
+        //UpdateToolHighlight();
+        HighlightButton(curlButton);
     }
 
     public void ActivateCombTool()
@@ -500,6 +518,8 @@ public class MovingScene : MonoBehaviour
         currentToolMode = ToolMode.Comb;
         sizeSlider.gameObject.SetActive(true);
         noiseSlider.gameObject.SetActive(false);
+        //UpdateToolHighlight();
+        HighlightButton(combButton);
     }
 
     public void ActivateWaveTool()
@@ -507,6 +527,8 @@ public class MovingScene : MonoBehaviour
         currentToolMode = ToolMode.Wave;
         sizeSlider.gameObject.SetActive(true);
         noiseSlider.gameObject.SetActive(true);
+        //UpdateToolHighlight();
+        HighlightButton(waveButton);
     }
 
     public void ActivateZoomTool()
@@ -516,6 +538,12 @@ public class MovingScene : MonoBehaviour
         isLocked = true;
         Debug.Log($" is locked");
         PlaneZoomController.Instance.EnterZoomInMode();
+        HighlightButton(zoomButton);
+
+    }
+    public void ActivateZoomOutTool()
+    {
+        HighlightButton(zoomOutButton);
 
     }
 
@@ -524,6 +552,8 @@ public class MovingScene : MonoBehaviour
         isLocked = false;
         Debug.Log($" is not locked");
         currentToolMode = ToolMode.None;
+
+      
     }
 
 
@@ -549,6 +579,57 @@ public class MovingScene : MonoBehaviour
     {
         noiseText.text = $"noise: {noiseStrength:0.00}";
     }
+
+    // private void UpdateToolHighlight()
+    // {
+    //     // Drop
+    //     SetButtonColor(dropButton, currentToolMode == ToolMode.Drop);
+    //     // Drag
+    //     SetButtonColor(dragButton, currentToolMode == ToolMode.Drag);
+    //     // Curl
+    //     SetButtonColor(curlButton, currentToolMode == ToolMode.Curl);
+    //     // Comb
+    //     SetButtonColor(combButton, currentToolMode == ToolMode.Comb);
+    //     // Wave
+    //     SetButtonColor(waveButton, currentToolMode == ToolMode.Wave);
+    // }
+    // private void SetButtonColor(Button button, bool isActive)
+    // {
+    //     ColorBlock cb = button.colors;
+    //     cb.normalColor = isActive ? activeColor : inactiveColor;
+    //     button.colors = cb;
+    // }
+    private void HighlightButton(Button activeButton)
+    {
+      
+
+        List<Button> allButtons = new List<Button>
+        {
+            dropButton, dragButton, curlButton, combButton, waveButton
+        };
+
+        // 如果你有 Zoom 按钮，也加进来
+        if (zoomButton != null)
+        {
+            allButtons.Add(zoomButton);
+           Debug.Log("have zoombutton");
+            }
+        if (zoomOutButton != null)
+        {
+            allButtons.Add(zoomOutButton);
+           Debug.Log("have zoomOutbutton");
+            }
+
+        foreach (Button btn in allButtons)
+        {
+            var image = btn.GetComponent<Image>();
+            if (image != null)
+                image.color = (btn == activeButton) ? activeColor : inactiveColor;
+        }
+    }
+
+
+
 
     // 设置选中的颜色
     public void SetSelectedColor(Color newColor)

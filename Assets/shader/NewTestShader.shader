@@ -271,10 +271,12 @@ Shader "Unlit/NewTestShader"
 
                         // 基础参数
                         float freqControl = saturate(_AllScales[lastOpIndex]);           // 0–1，决定卷曲频率
-                        float ampControl  = saturate(_AllNoiseStrength[lastOpIndex]); 
+                        //float ampControl  = saturate(_AllNoiseStrength[lastOpIndex]); 
                         float curlFreq = lerp(2.0, 25.0, freqControl);          
                         // 振幅调节：控制扰动强弱
-                        float curlAmp  = lerp(0.01, 0.3, ampControl);  
+                        //float curlAmp  = lerp(0.01, 0.3, ampControl);  
+                        float curlAmp  = lerp(0.01, 0.3, saturate(length(end - start))); 
+
                         // float curlFreq = lerp(2.0, 15.0, saturate(dragLength));         // 拖越长频率越高
                         // float curlAmp  = lerp(0.02, 0.3, noiseStrength);              // 振幅由 noise 控制
 
@@ -541,12 +543,13 @@ Shader "Unlit/NewTestShader"
                         //float noiseStrength = _AllNoiseStrength[j];
                         float noiseStrength = 1;
 
-                        // 基础参数
+                         // 基础参数
                         float freqControl = saturate(_AllScales[j]);           // 0–1，决定卷曲频率
-                        float ampControl  = saturate(_AllNoiseStrength[j]); 
+                        //float ampControl  = saturate(_AllNoiseStrength[lastOpIndex]); 
                         float curlFreq = lerp(2.0, 25.0, freqControl);          
                         // 振幅调节：控制扰动强弱
-                        float curlAmp  = lerp(0.01, 0.3, ampControl);  
+                        //float curlAmp  = lerp(0.01, 0.3, ampControl);  
+                        float curlAmp  = lerp(0.01, 0.3, saturate(length(end - start))); 
 
                         // float curlFreq = lerp(2.0, 15.0, saturate(dragLength));         // 拖越长频率越高
                         // float curlAmp  = lerp(0.02, 0.3, noiseStrength);              // 振幅由 noise 控制

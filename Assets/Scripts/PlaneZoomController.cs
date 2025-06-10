@@ -19,6 +19,8 @@ public class PlaneZoomController : MonoBehaviour
     private bool isZooming = false;
     private float zoomTimer = 0f;
 
+    
+
     public static PlaneZoomController Instance;
 
     private void Awake()
@@ -115,17 +117,34 @@ public class PlaneZoomController : MonoBehaviour
     /// </summary>
     public void ZoomInAt(Vector2 uv)
     {
+        // Vector3 worldPoint = UVToWorld(uv);
+
+        // Vector3 currentScale = planeTransform.localScale;
+        // Vector3 newScale = currentScale * zoomFactor;
+
+        // // 限制最大缩放
+        // if (newScale.x > originalScale.x * maxZoom)
+        //     newScale = originalScale * maxZoom;
+
+        // Vector3 offset = 1*(planeTransform.position - worldPoint);
+        // Vector3 newPosition = worldPoint + 2*offset / zoomFactor;
+
+        // targetScale = newScale;
+        // targetPosition = newPosition;
+        // zoomTimer = 0f;
+        // isZooming = true;
         Vector3 worldPoint = UVToWorld(uv);
 
+        // Step 1: 把 plane 平移，使点击点移动到初始中心（originalPosition）
+        Vector3 offset = worldPoint - planeTransform.position;
+        Vector3 newPosition = planeTransform.position + offset;
+
+        // Step 2: 再放大
         Vector3 currentScale = planeTransform.localScale;
         Vector3 newScale = currentScale * zoomFactor;
 
-        // 限制最大缩放
         if (newScale.x > originalScale.x * maxZoom)
             newScale = originalScale * maxZoom;
-
-        Vector3 offset = 1*(planeTransform.position - worldPoint);
-        Vector3 newPosition = worldPoint + 2*offset / zoomFactor;
 
         targetScale = newScale;
         targetPosition = newPosition;
