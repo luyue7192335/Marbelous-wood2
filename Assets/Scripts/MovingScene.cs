@@ -31,6 +31,19 @@ public class MovingScene : MonoBehaviour
             Instance = this;
         }
 
+    public RenderTexture targetRT;
+
+    void ClearRenderTexture()
+    {
+        RenderTexture current = RenderTexture.active;
+        RenderTexture.active = targetRT;
+
+        GL.Clear(true, true, Color.white); // 第二个参数 true 表示清除颜色缓冲
+
+        RenderTexture.active = current;
+    }
+
+
     public class LiquidOperation
     {
         public enum OpType { Drop = 0, Drag = 1, Curl = 2 ,Comb=3,Wave=4}
@@ -147,6 +160,8 @@ public class MovingScene : MonoBehaviour
         variationPanel.SetActive(false);
         originalPlane.SetActive(true);
 
+        ClearRenderTexture();
+
         // 绑定按钮事件
         dropButton.onClick.AddListener(ActivateBasicDropTool);
         dragButton.onClick.AddListener(ActivateDragTool);
@@ -158,7 +173,7 @@ public class MovingScene : MonoBehaviour
         generateButton.onClick.AddListener(GenerateVariations);
         exitGenerateButton.onClick.AddListener(ExitVariationMode);
         zoomButton.onClick.AddListener(ActivateZoomTool);
-        zoomOutButton.onClick.AddListener(ActivateZoomOutTool);
+        //zoomOutButton.onClick.AddListener(ActivateZoomOutTool);
 
         for (int i = 0; i < 4; i++) {
             // 假设你的画布是 512×512，按需调整
@@ -538,20 +553,24 @@ public class MovingScene : MonoBehaviour
         isLocked = true;
         Debug.Log($" is locked");
         PlaneZoomController.Instance.EnterZoomInMode();
-        HighlightButton(zoomButton);
+        //HighlightButton(zoomButton);
 
     }
-    public void ActivateZoomOutTool()
-    {
-        HighlightButton(zoomOutButton);
+    // public void ActivateZoomOutTool()
+    // {
+    //     //HighlightButton(zoomOutButton);
 
-    }
+    // }
 
     public void OnZoomInCompleted()
     {
         isLocked = false;
         Debug.Log($" is not locked");
         currentToolMode = ToolMode.None;
+
+        ColorBlock cb = zoomButton.colors;
+        cb.normalColor = Color.white; // 或者使用你预定义的 inactiveColor
+        zoomButton.colors = cb;
 
       
     }

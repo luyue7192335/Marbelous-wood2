@@ -4228,6 +4228,7 @@ MonoBehaviour:
   - {fileID: 616104100}
   exitGenerateButton: {fileID: 1693211018}
   zoomController: {fileID: 965553756}
+  targetRT: {fileID: 8400000, guid: f96d4652cfbbb4c46b411268341dfaa9, type: 2}
   maxOperations: 100
   toolsPanel: {fileID: 1482749390}
   dropButton: {fileID: 1622704762}
@@ -4760,6 +4761,7 @@ MonoBehaviour:
   zoomDuration: 0.3
   maxZoom: 4
   minZoom: 1
+  zoomButton: {fileID: 965553753}
   waitingForZoomInClick: 0
 --- !u!1 &969813353
 GameObject:

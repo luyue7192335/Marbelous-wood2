@@ -401,7 +401,7 @@ Shader "Unlit/NewTestShader"
                     {
                         float2 start = _AllOpData[j].xy;
                         float2 end   = _AllOpData[j].zw;
-                        float scale  = _AllScales[j];
+                        float scale  = 0.5*_AllScales[j];
                         float noiseStrength = _AllNoiseStrength[j];
 
                         float2 dragVec = start - end;
@@ -453,7 +453,7 @@ Shader "Unlit/NewTestShader"
                         // float rawPerlin = perlin_noise(noiseCoord);
                         //float perlin = saturate(rawPerlin * 0.5 + 0.5);  // [-0.7,0.7] 映射到 [0.15,0.85]
                         //float amplified = pow(abs(perlin - 0.5) * 2.0, 1.5); // 放大中间差异
-                                                // 简洁模拟 drop 的噪声逻辑
+                        // 简洁模拟 drop 的噪声逻辑
                         float2 offset1 = float2(0, 0); // 或者 lastOpIndex，用于让每个操作有不同噪声相位
                         float perlin = perlin_noise(displacedUV * 50.0 + offset1);
                         float noisePower = 1.0 + 6*noiseStrength * perlin;
@@ -523,7 +523,7 @@ Shader "Unlit/NewTestShader"
                         float2 end   = _AllOpData[j].zw;
                         float alpha = length(end - start);
                         //float beta  = max(_AllScales[j] * 0.25, 2.0 / (1 + 1));
-                         float beta  = _AllScales[j] * 0.25  ;            
+                         float beta  = _AllScales[j] * 0.5  ;            
                         if (alpha > 0.01) {
                             float2 m = (end - start) / alpha;
                             float2 n = float2(-m.y, m.x);

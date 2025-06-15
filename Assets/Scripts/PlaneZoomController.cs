@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlaneZoomController : MonoBehaviour
 {
@@ -18,6 +19,8 @@ public class PlaneZoomController : MonoBehaviour
 
     private bool isZooming = false;
     private float zoomTimer = 0f;
+
+    public Button zoomButton;
 
     
 
@@ -90,6 +93,9 @@ public class PlaneZoomController : MonoBehaviour
     {
         waitingForZoomInClick = true;
         Debug.Log("Zoom In Mode Activated, click plane to zoom in.");
+        ColorBlock cb = zoomButton.colors;
+        cb.normalColor = new Color(0.5f, 0.5f, 0.5f); // 或者使用你预定义的 inactiveColor
+        zoomButton.colors = cb;
     }
 
     /// <summary>
@@ -98,6 +104,9 @@ public class PlaneZoomController : MonoBehaviour
     public bool IsZoomMode()
     {
         return waitingForZoomInClick;
+        ColorBlock cb = zoomButton.colors;
+        cb.normalColor = new Color(0.85f, 0.85f, 0.85f); // 或者使用你预定义的 inactiveColor
+        zoomButton.colors = cb;
     }
 
     /// <summary>
@@ -110,6 +119,8 @@ public class PlaneZoomController : MonoBehaviour
 
         ZoomInAt(uv);
         waitingForZoomInClick = false;
+
+        
     }
 
     /// <summary>
@@ -150,6 +161,10 @@ public class PlaneZoomController : MonoBehaviour
         targetPosition = newPosition;
         zoomTimer = 0f;
         isZooming = true;
+
+        ColorBlock cb = zoomButton.colors;
+        cb.normalColor = Color.white; // 或者使用你预定义的 inactiveColor
+        zoomButton.colors = cb;
     }
 
     /// <summary>
